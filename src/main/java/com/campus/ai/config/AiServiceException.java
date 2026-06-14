@@ -1,13 +1,10 @@
 package com.campus.ai.config;
 
-import lombok.Getter;
-
 /**
  * AI服务异常类
  *
  * @author A组长
  */
-@Getter
 public class AiServiceException extends RuntimeException {
 
     private final Integer code;
@@ -25,5 +22,9 @@ public class AiServiceException extends RuntimeException {
     public AiServiceException(String message, Throwable cause) {
         super(message, cause);
         this.code = 502;
+    }
+
+    public Integer getCode() {
+        return code;
     }
 }

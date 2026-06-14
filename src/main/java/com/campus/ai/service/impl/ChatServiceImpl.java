@@ -5,17 +5,16 @@ import com.campus.ai.dto.ChatRequest;
 import com.campus.ai.dto.ChatResponse;
 import com.campus.ai.rag.RagService;
 import com.campus.ai.service.ChatService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.*;
-import org.springframework.ai.chat.model.ChatResponse as AiChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -28,12 +27,16 @@ import java.util.concurrent.Executor;
  *
  * @author A组长
  */
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
 
+    private static final Logger log = LoggerFactory.getLogger(ChatServiceImpl.class);
+
     private final ChatClient.Builder chatClientBuilder;
+
+    public ChatServiceImpl(ChatClient.Builder chatClientBuilder) {
+        this.chatClientBuilder = chatClientBuilder;
+    }
 
     @Autowired(required = false)
     private RagService ragService;
@@ -63,13 +66,13 @@ public class ChatServiceImpl implements ChatService {
             ChatClient chatClient = chatClientBuilder.build();
 
             // 执行AI调用（异步执行以利用线程池）
-            CompletableFuture<AiChatResponse> future = CompletableFuture.supplyAsync(() -> {
+            CompletableFuture<org.springframework.ai.chat.model.ChatResponse> future = CompletableFuture.supplyAsync(() -> {
                 Prompt prompt = new Prompt(messages);
                 return chatClient.prompt(prompt).call().chatResponse();
             }, aiTaskExecutor);
 
             // 等待结果
-            AiChatResponse aiResponse = future.get();
+            org.springframework.ai.chat.model.ChatResponse aiResponse = future.get();
 
             // 构建响应对象
             ChatResponse response = ChatResponse.builder()
@@ -109,13 +112,12 @@ public class ChatServiceImpl implements ChatService {
      * 智能问答（流式模式）
      */
     @Override
-    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter chatStream(ChatRequest request) {
+    public SseEmitter chatStream(ChatRequest request) {
         long startTime = System.currentTimeMillis();
         log.info("收到流式聊天请求: question={}, sessionId={}", request.getQuestion(), request.getSessionId());
 
         // 创建SSE连接（超时时间30分钟）
-        org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter =
-                new org.springframework.web.servlet.mvc.method.annotation.SseEmitter(30 * 60 * 1000L);
+        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
 
         // 异步处理流式请求
         CompletableFuture.runAsync(() -> {
@@ -125,30 +127,46 @@ public class ChatServiceImpl implements ChatService {
                 // 构建消息列表
                 List<Message> messages = buildMessages(request);
 
-                // 创建ChatClient
+                // 创建ChatClient并流式调用AI模型
                 ChatClient chatClient = chatClientBuilder.build();
                 Prompt prompt = new Prompt(messages);
 
-                // 流式调用AI模型
-                var stream = chatClient.prompt(prompt).stream().chatResponse();
+                var streamResponse = chatClient.prompt(prompt).stream().chatResponse();
 
-                // 发送流式数据
-                stream.content().forEach(content -> {
+                // 发送流式数据（从Flux<ChatResponse>中提取文本内容）
+                streamResponse.doOnNext(chatResp -> {
                     try {
-                        emitter.send(SseEmitter.event()
-                                .name("message")
-                                .data(content));
+                        String content = chatResp.getResult() != null && chatResp.getResult().getOutput() != null
+                                ? chatResp.getResult().getOutput().getText()
+                                : "";
+                        if (content != null && !content.isEmpty()) {
+                            emitter.send(SseEmitter.event()
+                                    .name("message")
+                                    .data(content));
+                        }
                     } catch (Exception e) {
                         log.warn("发送SSE数据失败", e);
                     }
-                });
-
-                // 发送完成事件
-                emitter.send(SseEmitter.event()
-                        .name("done")
-                        .data("{\"sessionId\":\"" + sessionId + "\",\"latency\":" + (System.currentTimeMillis() - startTime) + "}"));
-
-                emitter.complete();
+                }).doOnComplete(() -> {
+                    try {
+                        emitter.send(SseEmitter.event()
+                                .name("done")
+                                .data("{\"sessionId\":\"" + sessionId + "\",\"latency\":" + (System.currentTimeMillis() - startTime) + "}"));
+                        emitter.complete();
+                    } catch (Exception e) {
+                        emitter.completeWithError(e);
+                    }
+                }).doOnError(error -> {
+                    log.error("流式AI调用失败", error);
+                    try {
+                        emitter.send(SseEmitter.event()
+                                .name("error")
+                                .data("{\"error\":\"" + error.getMessage().replace("\"", "\\\"") + "\"}"));
+                        emitter.completeWithError(error);
+                    } catch (Exception ex) {
+                        emitter.completeWithError(ex);
+                    }
+                }).blockLast(); // 阻塞等待流完成
 
                 log.info("流式响应完成: sessionId={}, latency={}ms", sessionId, System.currentTimeMillis() - startTime);
 

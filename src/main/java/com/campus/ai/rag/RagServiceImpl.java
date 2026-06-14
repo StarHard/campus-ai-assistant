@@ -1,7 +1,8 @@
 package com.campus.ai.rag;
 
 import com.campus.ai.dto.ChatResponse;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -28,9 +29,10 @@ import java.util.stream.Collectors;
  *
  * @author A组长
  */
-@Slf4j
 @Service
 public class RagServiceImpl implements RagService {
+
+    private static final Logger log = LoggerFactory.getLogger(RagServiceImpl.class);
 
     /** 知识库存储：文档ID -> 文档内容块列表 */
     private final Map<String, List<DocumentChunk>> knowledgeBase = new ConcurrentHashMap<>();

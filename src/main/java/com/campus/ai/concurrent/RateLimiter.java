@@ -1,12 +1,11 @@
 package com.campus.ai.concurrent;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 请求限流器
@@ -15,9 +14,10 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @author A组长
  */
-@Slf4j
 @Component
 public class RateLimiter {
+
+    private static final Logger log = LoggerFactory.getLogger(RateLimiter.class);
 
     /** 用户请求计数器：userId -> (时间戳, 计数器) */
     private final ConcurrentHashMap<String, RateLimitInfo> userRateLimits = new ConcurrentHashMap<>();
@@ -50,30 +50,30 @@ public class RateLimiter {
             if (now - info.minuteStartTimestamp > 60_000) {
                 // 新的一分钟，重置分钟计数器
                 info.minuteStartTimestamp = now;
-                info.minuteCount.set(0);
+                info.minuteCount = 0;
             }
 
             // 检查小时级限流
             if (now - info.hourStartTimestamp > 3_600_000) {
                 // 新的一小时，重置小时计数器
                 info.hourStartTimestamp = now;
-                info.hourCount.set(0);
+                info.hourCount = 0;
             }
 
             // 判断是否超限
-            if (info.minuteCount.get() >= requestsPerMinute) {
-                log.warn("用户 {} 触发分钟级限流: {}/{}", userId, info.minuteCount.get(), requestsPerMinute);
+            if (info.minuteCount >= requestsPerMinute) {
+                log.warn("用户 {} 触发分钟级限流: {}/{}", userId, info.minuteCount, requestsPerMinute);
                 return false;
             }
 
-            if (info.hourCount.get() >= requestsPerHour) {
-                log.warn("用户 {} 触发小时级限流: {}/{}", userId, info.hourCount.get(), requestsPerHour);
+            if (info.hourCount >= requestsPerHour) {
+                log.warn("用户 {} 触发小时级限流: {}/{}", userId, info.hourCount, requestsPerHour);
                 return false;
             }
 
             // 增加计数
-            info.minuteCount.incrementAndGet();
-            info.hourCount.incrementAndGet();
+            info.minuteCount++;
+            info.hourCount++;
 
             return true;
         }
@@ -93,8 +93,8 @@ public class RateLimiter {
 
         synchronized (info) {
             return new int[]{
-                    Math.max(0, requestsPerMinute - info.minuteCount.get()),
-                    Math.max(0, requestsPerHour - info.hourCount.get())
+                    Math.max(0, requestsPerMinute - info.minuteCount),
+                    Math.max(0, requestsPerHour - info.hourCount)
             };
         }
     }
@@ -113,10 +113,10 @@ public class RateLimiter {
      * 限流信息内部类
      */
     private static class RateLimitInfo {
-        final AtomicLong minuteStartTimestamp = new AtomicLong(System.currentTimeMillis());
-        final AtomicInteger minuteCount = new AtomicInteger(0);
+        long minuteStartTimestamp = System.currentTimeMillis();
+        int minuteCount = 0;
 
-        final AtomicLong hourStartTimestamp = new AtomicLong(System.currentTimeMillis());
-        final AtomicInteger hourCount = new AtomicInteger(0);
+        long hourStartTimestamp = System.currentTimeMillis();
+        int hourCount = 0;
     }
 }

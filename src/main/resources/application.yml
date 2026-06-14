@@ -8,6 +8,11 @@ server:
 spring:
   application:
     name: campus-ai-assistant
+  # 临时禁用数据源自动配置（成员B完成数据库设计后移除此行）
+  autoconfigure:
+    exclude:
+      - com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
 
   # 数据源配置（由成员B负责完善数据库表设计）
   datasource:
@@ -54,6 +59,16 @@ spring:
       max-file-size: 50MB
       max-request-size: 100MB
 
+  # SpringAI Alibaba DashScope配置
+  ai:
+    dashscope:
+      api-key: sk-ws-H.RELRXHX.s6WP.MEYCIQDh5hcqRP11J30QYPv1IA76TBxGR4OCJwIBpOGIAvNUkwIhAKy4VbR-k5RpRt0mu0jeIPViQuV-ICxzwrciLs554LM7
+      chat:
+        options:
+          model: qwen-max
+          temperature: 0.7
+          max-tokens: 2000
+
 # MyBatis Plus配置
 mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
@@ -81,18 +96,6 @@ logging:
     name: logs/campus-ai-assistant.log
     max-size: 100MB
     max-history: 30
-
-# SpringAI Alibaba配置（核心AI引擎配置）
-spring-ai:
-  dashscope:
-    # 阿里云DashScope API Key（需要替换为实际密钥）
-    api-key: ${DASHSCOPE_API_KEY:your-dashscope-api-key}
-    # 默认使用的模型
-    chat:
-      options:
-        model: qwen-max
-        temperature: 0.7
-        max-tokens: 2000
 
 # RAG检索增强生成配置
 rag:

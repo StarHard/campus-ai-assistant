@@ -1,6 +1,7 @@
 package com.campus.ai.config;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,9 +16,10 @@ import java.util.concurrent.ThreadPoolExecutor;
  *
  * @author A组长
  */
-@Slf4j
 @Configuration
 public class ThreadPoolConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(ThreadPoolConfig.class);
 
     @Value("${concurrent.ai-thread-pool.core-pool-size:5}")
     private int aiCorePoolSize;
@@ -45,7 +47,7 @@ public class ThreadPoolConfig {
     public Executor aiTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(aiCorePoolSize);
-        executor.setMaximumPoolSize(aiMaximumPoolSize);
+        executor.setMaxPoolSize(aiMaximumPoolSize);
         executor.setQueueCapacity(aiQueueCapacity);
         executor.setThreadNamePrefix("AI-Worker-");
         // 拒绝策略：由调用线程执行（保证任务不丢失）
@@ -68,7 +70,7 @@ public class ThreadPoolConfig {
     public Executor streamingTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(streamingCorePoolSize);
-        executor.setMaximumPoolSize(streamingMaximumPoolSize);
+        executor.setMaxPoolSize(streamingMaximumPoolSize);
         executor.setQueueCapacity(streamingQueueCapacity);
         executor.setThreadNamePrefix("Streaming-Worker-");
         // 拒绝策略：丢弃最旧的任务（流式场景下，新数据更重要）

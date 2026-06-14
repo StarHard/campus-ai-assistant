@@ -1,6 +1,7 @@
 package com.campus.ai.concurrent;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
@@ -13,9 +14,10 @@ import java.util.concurrent.*;
  *
  * @author A组长
  */
-@Slf4j
 @Component
 public class AsyncTaskExecutor {
+
+    private static final Logger log = LoggerFactory.getLogger(AsyncTaskExecutor.class);
 
     private final Executor aiTaskExecutor;
     private final Executor streamingTaskExecutor;

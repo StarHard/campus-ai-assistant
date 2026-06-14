@@ -4,8 +4,8 @@ import com.campus.ai.dto.Result;
 import com.campus.ai.rag.RagService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,14 +19,18 @@ import java.util.Map;
  *
  * @author A组长
  */
-@Slf4j
 @RestController
 @RequestMapping("/rag")
-@RequiredArgsConstructor
 @Tag(name = "RAG知识库管理", description = "校园文档知识库管理接口")
 public class RagController {
 
+    private static final Logger log = LoggerFactory.getLogger(RagController.class);
+
     private final RagService ragService;
+
+    public RagController(RagService ragService) {
+        this.ragService = ragService;
+    }
 
     /**
      * 上传文档到知识库

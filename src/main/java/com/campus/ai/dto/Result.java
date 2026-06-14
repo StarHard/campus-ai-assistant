@@ -1,9 +1,5 @@
 package com.campus.ai.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.io.Serializable;
 
 /**
@@ -12,9 +8,6 @@ import java.io.Serializable;
  * @param <T> 数据类型
  * @author A组长
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Result<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -30,6 +23,48 @@ public class Result<T> implements Serializable {
 
     /** 时间戳 */
     private Long timestamp;
+
+    public Result() {
+    }
+
+    public Result(Integer code, String message, T data, Long timestamp) {
+        this.code = code;
+        this.message = message;
+        this.data = data;
+        this.timestamp = timestamp;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public void setCode(Integer code) {
+        this.code = code;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public T getData() {
+        return data;
+    }
+
+    public void setData(T data) {
+        this.data = data;
+    }
+
+    public Long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Long timestamp) {
+        this.timestamp = timestamp;
+    }
 
     /**
      * 成功响应（无数据）
