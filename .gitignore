@@ -53,3 +53,9 @@ jacoco.exec
 # 打包产物
 dist/
 build/
+
+# 前端依赖和构建产物
+frontend/node_modules/
+frontend/package-lock.json
+frontend/dist/
+frontend/build/
