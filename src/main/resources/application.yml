@@ -136,6 +136,10 @@ knife4j:
   setting:
     language: zh_cn
 
+# SpringDoc OpenAPI配置（修复Spring Boot 3.4.x兼容性问题）
+springdoc:
+  override-with-generic-response: false
+
 # 自定义应用配置
 app:
   # 系统提示词模板
