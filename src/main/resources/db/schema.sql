@@ -131,6 +131,15 @@ CREATE TABLE `campus_activity` (
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='校园活动表';
 
+DROP TABLE IF EXISTS `sys_user_role`;
+CREATE TABLE `sys_user_role` (
+    `id`       BIGINT NOT NULL AUTO_INCREMENT,
+    `user_id`  BIGINT NOT NULL COMMENT '用户ID',
+    `role_id`  BIGINT NOT NULL COMMENT '角色ID',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_role` (`user_id`, `role_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户角色关联表';
+
 DROP TABLE IF EXISTS `campus_reservation`;
 CREATE TABLE `campus_reservation` (
     `id`            BIGINT      NOT NULL AUTO_INCREMENT,

@@ -1,4 +1,5 @@
 package com.campus.ai.controller;
+import com.campus.ai.annotation.RequireRole;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.ai.dto.PageRequest;
@@ -19,6 +20,7 @@ public class CourseController {
     private CourseService courseService;
 
     @Operation(summary = "分页查询课程")
+    @RequireRole
     @GetMapping("/list")
     public Result<Page<Course>> listCourses(PageRequest pageRequest,
                                            @RequestParam(required = false) String department,
@@ -34,12 +36,14 @@ public class CourseController {
     }
 
     @Operation(summary = "课程详情")
+    @RequireRole
     @GetMapping("/{id}")
     public Result<Course> getCourse(@PathVariable Long id) {
         return Result.success(courseService.getById(id));
     }
 
     @Operation(summary = "新增课程")
+    @RequireRole({"ADMIN", "TEACHER"})
     @PostMapping
     public Result<Course> addCourse(@RequestBody Course course) {
         courseService.save(course);
@@ -47,6 +51,7 @@ public class CourseController {
     }
 
     @Operation(summary = "修改课程")
+    @RequireRole({"ADMIN", "TEACHER"})
     @PutMapping("/{id}")
     public Result<Course> updateCourse(@PathVariable Long id, @RequestBody Course course) {
         course.setId(id);
@@ -55,6 +60,7 @@ public class CourseController {
     }
 
     @Operation(summary = "删除课程")
+    @RequireRole("ADMIN")
     @DeleteMapping("/{id}")
     public Result<Void> deleteCourse(@PathVariable Long id) {
         courseService.removeById(id);

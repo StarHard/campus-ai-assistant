@@ -1,4 +1,5 @@
 package com.campus.ai.controller;
+import com.campus.ai.annotation.RequireRole;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.ai.dto.PageRequest;
@@ -19,6 +20,7 @@ public class ActivityController {
     private ActivityService activityService;
 
     @Operation(summary = "活动列表")
+    @RequireRole
     @GetMapping("/list")
     public Result<Page<Activity>> listActivities(PageRequest pageRequest,
                                                  @RequestParam(required = false) Integer activityType,
@@ -33,12 +35,14 @@ public class ActivityController {
     }
 
     @Operation(summary = "活动详情")
+    @RequireRole
     @GetMapping("/{id}")
     public Result<Activity> getActivity(@PathVariable Long id) {
         return Result.success(activityService.getById(id));
     }
 
-    @Operation(summary = "发布活动")
+    @Operation(summary = "发布活动（教师及以上）")
+    @RequireRole({"ADMIN", "TEACHER"})
     @PostMapping
     public Result<Activity> addActivity(@RequestBody Activity activity) {
         activity.setStatus(1);
@@ -48,6 +52,7 @@ public class ActivityController {
     }
 
     @Operation(summary = "修改活动")
+    @RequireRole({"ADMIN", "TEACHER"})
     @PutMapping("/{id}")
     public Result<Activity> updateActivity(@PathVariable Long id, @RequestBody Activity activity) {
         activity.setId(id);
@@ -56,6 +61,7 @@ public class ActivityController {
     }
 
     @Operation(summary = "取消活动")
+    @RequireRole({"ADMIN", "TEACHER"})
     @DeleteMapping("/{id}")
     public Result<Void> deleteActivity(@PathVariable Long id) {
         activityService.removeById(id);

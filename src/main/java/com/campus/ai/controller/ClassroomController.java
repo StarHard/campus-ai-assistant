@@ -1,4 +1,5 @@
 package com.campus.ai.controller;
+import com.campus.ai.annotation.RequireRole;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.ai.dto.PageRequest;
@@ -21,6 +22,7 @@ public class ClassroomController {
     private ClassroomService classroomService;
 
     @Operation(summary = "教室列表")
+    @RequireRole
     @GetMapping("/list")
     public Result<Page<Classroom>> listClassrooms(PageRequest pageRequest,
                                                   @RequestParam(required = false) String buildingName,
@@ -34,6 +36,7 @@ public class ClassroomController {
     }
 
     @Operation(summary = "查询空教室")
+    @RequireRole
     @GetMapping("/empty")
     public Result<List<Classroom>> findEmptyClassrooms(
             @RequestParam Integer weekday,
@@ -44,6 +47,7 @@ public class ClassroomController {
     }
 
     @Operation(summary = "教室详情")
+    @RequireRole
     @GetMapping("/{id}")
     public Result<Classroom> getClassroom(@PathVariable Long id) {
         return Result.success(classroomService.getById(id));
