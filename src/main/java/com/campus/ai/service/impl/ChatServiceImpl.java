@@ -65,6 +65,12 @@ public class ChatServiceImpl implements ChatService {
             // 创建ChatClient并调用AI模型
             ChatClient chatClient = chatClientBuilder.build();
 
+            // 如果启用RAG，检索知识来源（用于返回给前端展示）
+            List<ChatResponse.KnowledgeSource> sources = null;
+            if (Boolean.TRUE.equals(request.getEnableRag()) && ragService != null) {
+                sources = ragService.retrieveSources(request.getQuestion());
+            }
+
             // 执行AI调用（异步执行以利用线程池）
             CompletableFuture<org.springframework.ai.chat.model.ChatResponse> future = CompletableFuture.supplyAsync(() -> {
                 Prompt prompt = new Prompt(messages);
@@ -82,6 +88,7 @@ public class ChatServiceImpl implements ChatService {
                     .model(getModelName(request))
                     .latency(System.currentTimeMillis() - startTime)
                     .ragEnabled(request.getEnableRag())
+                    .sources(sources)
                     .build();
 
             // 设置Token使用统计
