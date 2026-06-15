@@ -8,13 +8,7 @@ server:
 spring:
   application:
     name: campus-ai-assistant
-  # 临时禁用数据源自动配置（成员B完成数据库设计后移除此行）
-  autoconfigure:
-    exclude:
-      - com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-
-  # 数据源配置（由成员B负责完善数据库表设计）
+  # 数据源配置（组员B已完成数据库表设计，已启用）
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
