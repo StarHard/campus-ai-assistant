@@ -76,13 +76,6 @@
             <version>${hutool.version}</version>
         </dependency>
 
-        <!-- Lombok 简化代码 -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
-
         <!-- Knife4j API Documentation -->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
