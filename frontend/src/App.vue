@@ -1,72 +1,88 @@
-<script setup>
-import { useUserStore } from './stores/user';
-import { useRouter, useRoute } from 'vue-router';
-
-const userStore = useUserStore();
-const router = useRouter();
-const route = useRoute();
-
-const isAuthPage = () => {
-  return route.path === '/login' || route.path === '/register';
-};
-
-const handleLogout = () => {
-  userStore.logout();
-  router.push('/');
-};
-</script>
-
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700">
-    <div class="fixed inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
-      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
-      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
-    </div>
-
-    <div v-if="!isAuthPage()" class="relative z-10 bg-white/10 backdrop-blur-sm border-b border-white/10">
-      <div class="max-w-5xl mx-auto flex items-center justify-between px-4 py-2">
-        <router-link to="/" class="flex items-center gap-2 text-white hover:opacity-80">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
-          <span class="font-medium text-sm">校园智能助手</span>
+  <div class="min-h-screen bg-notion-canvas-soft font-notion">
+    <!-- 顶部导航栏 -->
+    <nav class="bg-notion-canvas border-b border-notion-hairline sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+        <!-- 左侧Logo -->
+        <router-link to="/" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <div class="w-7 h-7 bg-notion-primary rounded-notion-md flex items-center justify-center">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+          </div>
+          <span class="text-notion-ink font-semibold text-[15px]">校园智能助手</span>
         </router-link>
 
+        <!-- 中间导航 -->
         <div class="flex items-center gap-1">
-          <router-link to="/" class="px-3 py-1.5 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all" active-class="!text-white !bg-white/15">
+          <router-link
+            to="/"
+            class="px-3 py-1.5 text-[14px] rounded-notion-sm transition-colors"
+            :class="$route.path === '/' ? 'text-notion-primary bg-notion-primary/5' : 'text-notion-ink-muted hover:text-notion-ink hover:bg-notion-canvas-soft'"
+          >
             AI问答
           </router-link>
-          <router-link to="/courses" class="px-3 py-1.5 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all" active-class="!text-white !bg-white/15">
+          <router-link
+            to="/courses"
+            class="px-3 py-1.5 text-[14px] rounded-notion-sm transition-colors"
+            :class="$route.path.startsWith('/courses') ? 'text-notion-primary bg-notion-primary/5' : 'text-notion-ink-muted hover:text-notion-ink hover:bg-notion-canvas-soft'"
+          >
             课程查询
           </router-link>
-          <router-link to="/classrooms" class="px-3 py-1.5 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all" active-class="!text-white !bg-white/15">
+          <router-link
+            to="/classrooms"
+            class="px-3 py-1.5 text-[14px] rounded-notion-sm transition-colors"
+            :class="$route.path === '/classrooms' ? 'text-notion-primary bg-notion-primary/5' : 'text-notion-ink-muted hover:text-notion-ink hover:bg-notion-canvas-soft'"
+          >
             教室查询
           </router-link>
         </div>
 
-        <div v-if="userStore.isLoggedIn" class="flex items-center gap-3">
-          <span class="text-white/80 text-sm">{{ userStore.user?.realName || userStore.user?.username }}</span>
-          <button @click="handleLogout" class="px-3 py-1.5 text-sm text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-all">
-            退出
-          </button>
-        </div>
-        <div v-else class="flex items-center gap-2">
-          <router-link to="/login" class="px-4 py-1.5 text-sm text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-all">
-            登录
-          </router-link>
-          <router-link to="/register" class="px-4 py-1.5 text-sm text-white bg-white/20 hover:bg-white/30 rounded-lg transition-all">
-            注册
-          </router-link>
+        <!-- 右侧用户 -->
+        <div class="flex items-center gap-3">
+          <template v-if="userStore.isLoggedIn">
+            <span class="text-[14px] text-notion-ink-secondary">{{ userStore.user?.realName || userStore.user?.username }}</span>
+            <button
+              @click="handleLogout"
+              class="text-[14px] text-notion-ink-faint hover:text-notion-ink-muted transition-colors"
+            >
+              退出
+            </button>
+          </template>
+          <template v-else>
+            <router-link
+              to="/login"
+              class="text-[14px] text-notion-ink-muted hover:text-notion-ink transition-colors"
+            >
+              登录
+            </router-link>
+            <router-link
+              to="/register"
+              class="px-4 py-1.5 bg-notion-primary text-white text-[14px] font-medium rounded-notion-full hover:bg-notion-primary-active transition-colors"
+            >
+              注册
+            </router-link>
+          </template>
         </div>
       </div>
-    </div>
+    </nav>
 
-    <div :class="isAuthPage() ? '' : 'relative z-10 h-[calc(100vh-45px)]'">
+    <!-- 主内容 -->
+    <main class="h-[calc(100vh-56px)]">
       <router-view />
-    </div>
+    </main>
   </div>
 </template>
 
-<style scoped>
-</style>
+<script setup>
+import { useUserStore } from './stores/user';
+import { useRouter } from 'vue-router';
+
+const userStore = useUserStore();
+const router = useRouter();
+
+const handleLogout = async () => {
+  await userStore.logout();
+  router.push('/login');
+};
+</script>

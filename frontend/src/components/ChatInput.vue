@@ -1,11 +1,11 @@
 <template>
-  <div class="bg-white/5 border-t border-white/10 px-4 py-3">
+  <div class="bg-notion-canvas border-t border-notion-hairline p-4">
     <div class="flex items-end gap-3 max-w-3xl mx-auto">
       <div class="flex-1 relative">
         <textarea
           v-model="message"
           placeholder="输入您的问题..."
-          class="w-full px-4 py-3 pr-12 bg-white/10 text-white placeholder-white/40 rounded-2xl border-none outline-none resize-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+          class="w-full px-4 py-3 pr-16 bg-notion-canvas-soft border border-notion-hairline rounded-notion-md text-notion-ink text-[15px] outline-none resize-none focus:border-notion-primary focus:shadow-notion-1 placeholder:text-notion-ink-faint transition-all"
           rows="1"
           maxlength="2000"
           @keydown.enter.exact.prevent="sendMessage"
@@ -13,13 +13,13 @@
           ref="textareaRef"
         ></textarea>
         
-        <span class="absolute right-3 bottom-3 text-xs text-white/30">
+        <span class="absolute right-3 bottom-3 text-[12px] text-notion-ink-faint">
           {{ message.length }}/2000
         </span>
       </div>
 
       <button
-        class="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        class="flex-shrink-0 px-4 py-3 bg-notion-primary text-white rounded-notion-md hover:bg-notion-primary-active transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         :disabled="!message.trim() || isSending || props.disabled"
         @click="sendMessage"
       >
@@ -37,7 +37,7 @@
       <button
         v-for="question in quickQuestions"
         :key="question"
-        class="px-3 py-1.5 text-xs bg-white/10 hover:bg-white/15 text-white/50 hover:text-white rounded-full transition-colors"
+        class="px-3 py-1.5 text-[12px] bg-notion-canvas hover:bg-notion-canvas-soft text-notion-ink-muted hover:text-notion-ink border border-notion-hairline rounded-notion-md transition-colors"
         @click="sendQuickQuestion(question)"
       >
         {{ question }}
