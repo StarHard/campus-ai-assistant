@@ -8,9 +8,11 @@ import com.campus.ai.dao.UserRoleMapper;
 import com.campus.ai.dto.LoginRequest;
 import com.campus.ai.dto.LoginResponse;
 import com.campus.ai.dto.RegisterRequest;
+import com.campus.ai.dto.UpdateUserRequest;
 import com.campus.ai.entity.Role;
 import com.campus.ai.entity.User;
 import com.campus.ai.entity.UserRole;
+import com.campus.ai.service.LoginLogService;
 import com.campus.ai.service.UserService;
 import com.campus.ai.util.Md5Util;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,13 +26,16 @@ import java.util.concurrent.ConcurrentHashMap;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     /** 内存Token存储：key=token, value=userId */
-    private final ConcurrentHashMap<String, Long> tokenStore = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> tokenStore = new ConcurrentHashMap<>();
 
     @Autowired
     private UserRoleMapper userRoleMapper;
 
     @Autowired
     private RoleMapper roleMapper;
+
+    @Autowired
+    private LoginLogService loginLogService;
 
     @Override
     public User login(LoginRequest request) {
@@ -47,29 +52,45 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public LoginResponse loginWithToken(LoginRequest request) {
-        User user = login(request);
-        // 生成Token并存储
-        String token = UUID.randomUUID().toString().replace("-", "");
-        tokenStore.put(token, user.getId());
+        String username = request.getUsername();
+        try {
+            User user = login(request);
+            // 记录登录成功日志
+            loginLogService.recordLogin(user.getId(), username, null, null, true, "登录成功");
+            // 生成Token并存储
+            String token = UUID.randomUUID().toString().replace("-", "");
+            tokenStore.put(token, user.getId());
 
-        // 查询用户角色
-        List<String> roles = getUserRoles(user.getId());
-        List<String> roleNames = getRoleNames(roles);
+            // 查询用户角色
+            List<String> roles = getUserRoles(user.getId());
+            List<String> roleNames = getRoleNames(roles);
 
-        // 构建响应
-        LoginResponse response = new LoginResponse();
-        response.setUserId(user.getId());
-        response.setUsername(user.getUsername());
-        response.setRealName(user.getRealName());
-        response.setUserType(user.getUserType());
-        response.setUserTypeName(user.getUserType() == 1 ? "教师" : "学生");
-        response.setDepartment(user.getDepartment());
-        response.setAvatar(user.getAvatar());
-        response.setLoginTime(user.getLastLogin());
-        response.setToken(token);
-        response.setRoles(roles);
-        response.setRoleNames(roleNames);
-        return response;
+            // 构建响应
+            LoginResponse response = new LoginResponse();
+            response.setUserId(user.getId());
+            response.setUsername(user.getUsername());
+            response.setRealName(user.getRealName());
+            response.setUserType(user.getUserType());
+            String typeName;
+            if (user.getUserType() == 1) typeName = "教师";
+            else if (user.getUserType() == 2) typeName = "学生";
+            else typeName = "管理员";
+            response.setUserTypeName(typeName);
+            response.setDepartment(user.getDepartment());
+            response.setAvatar(user.getAvatar());
+            response.setLoginTime(user.getLastLogin());
+            response.setToken(token);
+            response.setRoles(roles);
+            response.setRoleNames(roleNames);
+            return response;
+        } catch (RuntimeException e) {
+            // 记录登录失败日志
+            String userId = null;
+            User tempUser = getByUsername(username);
+            if (tempUser != null) userId = tempUser.getId();
+            loginLogService.recordLogin(userId, username, null, null, false, e.getMessage());
+            throw e;
+        }
     }
 
     @Override
@@ -90,6 +111,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setMajor(request.getMajor());
         user.setGrade(request.getGrade());
         user.setStatus(1);
+        // userId 以00/01开头：直接用username作为主键ID
+        user.setId(request.getUsername());
         if (user.getUserType() == 1) user.setTeacherNo(request.getUsername());
         else user.setStudentNo(request.getUsername());
         save(user);
@@ -110,7 +133,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public void changePassword(Long userId, String oldPassword, String newPassword) {
+    public void changePassword(String userId, String oldPassword, String newPassword) {
         User user = getById(userId);
         if (user == null) throw new RuntimeException("用户不存在");
         if (!Md5Util.verify(oldPassword, user.getSalt(), user.getPassword())) throw new RuntimeException("原密码错误");
@@ -121,7 +144,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public Long validateToken(String token) {
+    public String validateToken(String token) {
         return tokenStore.get(token);
     }
 
@@ -131,7 +154,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public List<String> getUserRoles(Long userId) {
+    public List<String> getUserRoles(String userId) {
         LambdaQueryWrapper<UserRole> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(UserRole::getUserId, userId);
         List<UserRole> userRoles = userRoleMapper.selectList(wrapper);
@@ -156,7 +179,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     /**
      * 根据用户类型分配默认角色：教师→TEACHER，学生→STUDENT
      */
-    private void assignDefaultRole(Long userId, Integer userType) {
+    private void assignDefaultRole(String userId, Integer userType) {
         String roleCode = (userType != null && userType == 1) ? "TEACHER" : "STUDENT";
         LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Role::getRoleCode, roleCode);
@@ -184,5 +207,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             names.add(r.getRoleName());
         }
         return names;
+    }
+
+    @Override
+    public void updateUser(String id, UpdateUserRequest request) {
+        User user = getById(id);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+        if (request.getRealName() != null) user.setRealName(request.getRealName());
+        if (request.getGender() != null) user.setGender(request.getGender());
+        if (request.getPhone() != null) user.setPhone(request.getPhone());
+        if (request.getEmail() != null) user.setEmail(request.getEmail());
+        if (request.getDepartment() != null) user.setDepartment(request.getDepartment());
+        if (request.getMajor() != null) user.setMajor(request.getMajor());
+        if (request.getGrade() != null) user.setGrade(request.getGrade());
+        if (request.getAvatar() != null) user.setAvatar(request.getAvatar());
+        updateById(user);
+    }
+
+    @Override
+    public void deactivateUser(String userId) {
+        User user = getById(userId);
+        if (user == null) throw new RuntimeException("用户不存在");
+        user.setStatus(0);
+        updateById(user);
     }
 }

@@ -1,4 +1,5 @@
 package com.campus.ai.controller;
+
 import com.campus.ai.annotation.RequireRole;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -25,25 +26,12 @@ public class ClassroomController {
     @RequireRole
     @GetMapping("/list")
     public Result<Page<Classroom>> listClassrooms(PageRequest pageRequest,
-                                                  @RequestParam(required = false) String buildingName,
-                                                  @RequestParam(required = false) Integer roomType) {
+                                                  @RequestParam(required = false) String roomName) {
         Page<Classroom> page = new Page<>(pageRequest.getPageNum(), pageRequest.getPageSize());
         LambdaQueryWrapper<Classroom> wrapper = new LambdaQueryWrapper<>();
-        if (buildingName != null) wrapper.like(Classroom::getBuildingName, buildingName);
-        if (roomType != null) wrapper.eq(Classroom::getRoomType, roomType);
-        wrapper.eq(Classroom::getStatus, 1).orderByAsc(Classroom::getBuildingName).orderByAsc(Classroom::getRoomNumber);
+        if (roomName != null && !roomName.isEmpty()) wrapper.like(Classroom::getRoomName, roomName);
+        wrapper.orderByAsc(Classroom::getRoomName);
         return Result.success(classroomService.page(page, wrapper));
-    }
-
-    @Operation(summary = "查询空教室")
-    @RequireRole
-    @GetMapping("/empty")
-    public Result<List<Classroom>> findEmptyClassrooms(
-            @RequestParam Integer weekday,
-            @RequestParam Integer startSection,
-            @RequestParam Integer endSection,
-            @RequestParam(defaultValue = "2025-2026-1") String semester) {
-        return Result.success(classroomService.findEmptyClassrooms(weekday, startSection, endSection, semester));
     }
 
     @Operation(summary = "教室详情")

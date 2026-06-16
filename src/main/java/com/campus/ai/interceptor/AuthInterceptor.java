@@ -56,7 +56,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         // 验证token并获取用户ID
-        Long userId = userService.validateToken(token);
+        String userId = userService.validateToken(token);
         if (userId == null) {
             throw new BusinessException(401, "令牌无效或已过期，请重新登录");
         }

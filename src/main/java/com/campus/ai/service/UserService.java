@@ -3,6 +3,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.campus.ai.dto.LoginRequest;
 import com.campus.ai.dto.LoginResponse;
 import com.campus.ai.dto.RegisterRequest;
+import com.campus.ai.dto.UpdateUserRequest;
 import com.campus.ai.entity.User;
 
 import java.util.List;
@@ -12,11 +13,15 @@ public interface UserService extends IService<User> {
     LoginResponse loginWithToken(LoginRequest request);
     User register(RegisterRequest request);
     User getByUsername(String username);
-    void changePassword(Long userId, String oldPassword, String newPassword);
+    void changePassword(String userId, String oldPassword, String newPassword);
     /** 验证Token是否有效，返回用户ID，无效返回null */
-    Long validateToken(String token);
+    String validateToken(String token);
     /** 使Token失效（登出） */
     void invalidateToken(String token);
     /** 获取用户的角色编码列表 */
-    List<String> getUserRoles(Long userId);
+    List<String> getUserRoles(String userId);
+    /** 更新用户信息 */
+    void updateUser(String id, UpdateUserRequest request);
+    /** 停用用户 */
+    void deactivateUser(String userId);
 }
