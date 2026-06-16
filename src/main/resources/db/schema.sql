@@ -166,7 +166,7 @@ CREATE TABLE `sys_login_log` (
 
 -- 初始化管理员账号 (admin / 123456)
 INSERT INTO `sys_user` (`id`, `username`, `password`, `salt`, `real_name`, `user_type`, `department`, `status`) VALUES
-('admin', 'admin', 'e10adc3949ba59abbe56e057f20f883e', 'abcd1234', '系统管理员', 0, '信息中心', 1);
+('admin', 'admin', 'cdfd6fbdd51d731b9aac36c5cd836519', 'abcd1234', '系统管理员', 0, '信息中心', 1);
 
 INSERT INTO `sys_user_role` (`user_id`, `role_id`) VALUES
 ('admin', 1);
