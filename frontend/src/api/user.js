@@ -22,4 +22,11 @@ export const userApi = {
     });
     return response.data;
   },
+
+  logout: async (token) => {
+    const response = await api.post('/user/logout', null, {
+      headers: { 'X-Token': token },
+    });
+    return response.data;
+  },
 };

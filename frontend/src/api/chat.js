@@ -12,7 +12,10 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    console.log(`[API] Request: ${config.method?.toUpperCase()} ${config.url}`);
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['X-Token'] = token;
+    }
     return config;
   },
   (error) => {
@@ -22,12 +25,12 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-  (response) => {
-    console.log(`[API] Response: ${response.status} ${response.config.url}`);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error('[API] Response Error:', error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
     return Promise.reject(error);
   }
 );
@@ -60,32 +63,60 @@ export const chatApi = {
     return response.data;
   },
 
-  streamAsk: (question, sessionId = null, onMessage, onError) => {
-    const params = new URLSearchParams({ question });
-    if (sessionId) {
-      params.append('sessionId', sessionId);
+  streamAsk: async (question, sessionId = null, onMessage, onDone, onError) => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch(`${BASE_URL}/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'X-Token': token } : {}),
+        },
+        body: JSON.stringify({ question, sessionId, enableRag: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let currentEvent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            currentEvent = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            const dataStr = line.slice(5).trim();
+            if (currentEvent === 'done') {
+              try {
+                const data = JSON.parse(dataStr);
+                onMessage({ type: 'done', ...data });
+              } catch {
+                if (onDone) onDone();
+                return;
+              }
+              if (onDone) onDone();
+              return;
+            } else if (currentEvent === 'message') {
+              onMessage({ type: 'message', content: dataStr });
+            }
+          }
+        }
+      }
+      if (onDone) onDone();
+    } catch (error) {
+      if (onError) onError(error);
     }
-
-    const eventSource = new EventSource(`${BASE_URL}/chat/stream?${params.toString()}`);
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        onMessage(data);
-      } catch (error) {
-        console.error('[SSE] Parse Error:', error);
-      }
-    };
-
-    eventSource.onerror = (error) => {
-      console.error('[SSE] Error:', error);
-      if (onError) {
-        onError(error);
-      }
-      eventSource.close();
-    };
-
-    return eventSource;
   },
 };
 
