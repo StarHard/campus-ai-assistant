@@ -86,6 +86,7 @@ CREATE TABLE `campus_course` (
     `exam_type`       TINYINT      DEFAULT NULL,
     `semester`        VARCHAR(20)  DEFAULT NULL,
     `description`     VARCHAR(500) DEFAULT NULL,
+    `schedule_time`   VARCHAR(100) DEFAULT NULL COMMENT '上课时间',
     `status`          TINYINT      NOT NULL DEFAULT 1,
     `create_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `update_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -155,3 +156,18 @@ CREATE TABLE `campus_reservation` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_user_activity` (`user_id`, `activity_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='预约表';
+
+DROP TABLE IF EXISTS `sys_login_log`;
+CREATE TABLE `sys_login_log` (
+    `id`          BIGINT NOT NULL AUTO_INCREMENT,
+    `user_id`     BIGINT NOT NULL COMMENT '用户ID',
+    `username`    VARCHAR(50) DEFAULT NULL,
+    `ip_address`  VARCHAR(50) DEFAULT NULL COMMENT '登录IP',
+    `user_agent`  VARCHAR(255) DEFAULT NULL,
+    `login_time`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `status`      TINYINT NOT NULL DEFAULT 1 COMMENT '1:成功 0:失败',
+    `message`     VARCHAR(100) DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_login_time` (`login_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='登录日志表';

@@ -4,6 +4,7 @@ import com.campus.ai.dto.LoginRequest;
 import com.campus.ai.dto.LoginResponse;
 import com.campus.ai.dto.RegisterRequest;
 import com.campus.ai.dto.Result;
+import com.campus.ai.dto.UpdateUserRequest;
 import com.campus.ai.entity.User;
 import com.campus.ai.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -54,5 +55,23 @@ public class UserController {
     public Result<Void> logout(@RequestHeader("X-Token") String token) {
         userService.invalidateToken(token);
         return Result.success("已退出登录", null);
+    }
+
+    @Operation(summary = "修改用户基本信息")
+    @RequireRole
+    @PutMapping("/{id}")
+    public Result<User> updateUser(@PathVariable Long id, @RequestBody UpdateUserRequest request) {
+        userService.updateUser(id, request);
+        User user = userService.getById(id);
+        if (user != null) { user.setPassword(null); user.setSalt(null); }
+        return Result.success("更新成功", user);
+    }
+
+    @Operation(summary = "注销用户（仅管理员）")
+    @RequireRole("ADMIN")
+    @DeleteMapping("/{id}")
+    public Result<Void> deactivateUser(@PathVariable Long id) {
+        userService.deactivateUser(id);
+        return Result.success("用户已注销", null);
     }
 }

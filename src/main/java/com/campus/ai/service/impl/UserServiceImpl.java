@@ -8,9 +8,11 @@ import com.campus.ai.dao.UserRoleMapper;
 import com.campus.ai.dto.LoginRequest;
 import com.campus.ai.dto.LoginResponse;
 import com.campus.ai.dto.RegisterRequest;
+import com.campus.ai.dto.UpdateUserRequest;
 import com.campus.ai.entity.Role;
 import com.campus.ai.entity.User;
 import com.campus.ai.entity.UserRole;
+import com.campus.ai.service.LoginLogService;
 import com.campus.ai.service.UserService;
 import com.campus.ai.util.Md5Util;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Autowired
     private RoleMapper roleMapper;
 
+    @Autowired
+    private LoginLogService loginLogService;
+
     @Override
     public User login(LoginRequest request) {
         User user = getByUsername(request.getUsername());
@@ -47,29 +52,45 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public LoginResponse loginWithToken(LoginRequest request) {
-        User user = login(request);
-        // 生成Token并存储
-        String token = UUID.randomUUID().toString().replace("-", "");
-        tokenStore.put(token, user.getId());
+        String username = request.getUsername();
+        try {
+            User user = login(request);
+            // 记录登录成功日志
+            loginLogService.recordLogin(user.getId(), username, null, null, true, "登录成功");
+            // 生成Token并存储
+            String token = UUID.randomUUID().toString().replace("-", "");
+            tokenStore.put(token, user.getId());
 
-        // 查询用户角色
-        List<String> roles = getUserRoles(user.getId());
-        List<String> roleNames = getRoleNames(roles);
+            // 查询用户角色
+            List<String> roles = getUserRoles(user.getId());
+            List<String> roleNames = getRoleNames(roles);
 
-        // 构建响应
-        LoginResponse response = new LoginResponse();
-        response.setUserId(user.getId());
-        response.setUsername(user.getUsername());
-        response.setRealName(user.getRealName());
-        response.setUserType(user.getUserType());
-        response.setUserTypeName(user.getUserType() == 1 ? "教师" : "学生");
-        response.setDepartment(user.getDepartment());
-        response.setAvatar(user.getAvatar());
-        response.setLoginTime(user.getLastLogin());
-        response.setToken(token);
-        response.setRoles(roles);
-        response.setRoleNames(roleNames);
-        return response;
+            // 构建响应
+            LoginResponse response = new LoginResponse();
+            response.setUserId(user.getId());
+            response.setUsername(user.getUsername());
+            response.setRealName(user.getRealName());
+            response.setUserType(user.getUserType());
+            String typeName;
+            if (user.getUserType() == 1) typeName = "教师";
+            else if (user.getUserType() == 2) typeName = "学生";
+            else typeName = "管理员";
+            response.setUserTypeName(typeName);
+            response.setDepartment(user.getDepartment());
+            response.setAvatar(user.getAvatar());
+            response.setLoginTime(user.getLastLogin());
+            response.setToken(token);
+            response.setRoles(roles);
+            response.setRoleNames(roleNames);
+            return response;
+        } catch (RuntimeException e) {
+            // 记录登录失败日志
+            Long userId = null;
+            User tempUser = getByUsername(username);
+            if (tempUser != null) userId = tempUser.getId();
+            loginLogService.recordLogin(userId, username, null, null, false, e.getMessage());
+            throw e;
+        }
     }
 
     @Override
@@ -184,5 +205,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             names.add(r.getRoleName());
         }
         return names;
+    }
+
+    @Override
+    public void updateUser(Long id, UpdateUserRequest request) {
+        User user = getById(id);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+        if (request.getRealName() != null) user.setRealName(request.getRealName());
+        if (request.getGender() != null) user.setGender(request.getGender());
+        if (request.getPhone() != null) user.setPhone(request.getPhone());
+        if (request.getEmail() != null) user.setEmail(request.getEmail());
+        if (request.getDepartment() != null) user.setDepartment(request.getDepartment());
+        if (request.getMajor() != null) user.setMajor(request.getMajor());
+        if (request.getGrade() != null) user.setGrade(request.getGrade());
+        if (request.getAvatar() != null) user.setAvatar(request.getAvatar());
+        updateById(user);
+    }
+
+    @Override
+    public void deactivateUser(Long userId) {
+        User user = getById(userId);
+        if (user == null) throw new RuntimeException("用户不存在");
+        user.setStatus(0);
+        updateById(user);
     }
 }

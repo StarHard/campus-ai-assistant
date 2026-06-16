@@ -41,7 +41,11 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         HandlerMethod handlerMethod = (HandlerMethod) handler;
+        // 检查方法级别和类级别的 @RequireRole 注解
         RequireRole requireRole = handlerMethod.getMethodAnnotation(RequireRole.class);
+        if (requireRole == null) {
+            requireRole = handlerMethod.getBeanType().getAnnotation(RequireRole.class);
+        }
         if (requireRole == null) {
             // 没有标注@RequireRole，视为公开接口
             return true;
