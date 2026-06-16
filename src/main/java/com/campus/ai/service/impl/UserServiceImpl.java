@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     /** 内存Token存储：key=token, value=userId */
-    private final ConcurrentHashMap<String, Long> tokenStore = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> tokenStore = new ConcurrentHashMap<>();
 
     @Autowired
     private UserRoleMapper userRoleMapper;
@@ -85,7 +85,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             return response;
         } catch (RuntimeException e) {
             // 记录登录失败日志
-            Long userId = null;
+            String userId = null;
             User tempUser = getByUsername(username);
             if (tempUser != null) userId = tempUser.getId();
             loginLogService.recordLogin(userId, username, null, null, false, e.getMessage());
@@ -111,6 +111,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setMajor(request.getMajor());
         user.setGrade(request.getGrade());
         user.setStatus(1);
+        // userId 以00/01开头：直接用username作为主键ID
+        user.setId(request.getUsername());
         if (user.getUserType() == 1) user.setTeacherNo(request.getUsername());
         else user.setStudentNo(request.getUsername());
         save(user);
@@ -131,7 +133,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public void changePassword(Long userId, String oldPassword, String newPassword) {
+    public void changePassword(String userId, String oldPassword, String newPassword) {
         User user = getById(userId);
         if (user == null) throw new RuntimeException("用户不存在");
         if (!Md5Util.verify(oldPassword, user.getSalt(), user.getPassword())) throw new RuntimeException("原密码错误");
@@ -142,7 +144,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public Long validateToken(String token) {
+    public String validateToken(String token) {
         return tokenStore.get(token);
     }
 
@@ -152,7 +154,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public List<String> getUserRoles(Long userId) {
+    public List<String> getUserRoles(String userId) {
         LambdaQueryWrapper<UserRole> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(UserRole::getUserId, userId);
         List<UserRole> userRoles = userRoleMapper.selectList(wrapper);
@@ -177,7 +179,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     /**
      * 根据用户类型分配默认角色：教师→TEACHER，学生→STUDENT
      */
-    private void assignDefaultRole(Long userId, Integer userType) {
+    private void assignDefaultRole(String userId, Integer userType) {
         String roleCode = (userType != null && userType == 1) ? "TEACHER" : "STUDENT";
         LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Role::getRoleCode, roleCode);
@@ -208,7 +210,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public void updateUser(Long id, UpdateUserRequest request) {
+    public void updateUser(String id, UpdateUserRequest request) {
         User user = getById(id);
         if (user == null) {
             throw new RuntimeException("用户不存在");
@@ -225,7 +227,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public void deactivateUser(Long userId) {
+    public void deactivateUser(String userId) {
         User user = getById(userId);
         if (user == null) throw new RuntimeException("用户不存在");
         user.setStatus(0);

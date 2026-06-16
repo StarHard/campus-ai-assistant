@@ -5,7 +5,7 @@ import com.campus.ai.entity.LoginLog;
 
 public interface LoginLogService {
 
-    void recordLogin(Long userId, String username, String ip, String userAgent, boolean success, String message);
+    void recordLogin(String userId, String username, String ip, String userAgent, boolean success, String message);
 
-    IPage<LoginLog> queryLogs(Long userId, Integer page, Integer pageSize);
+    IPage<LoginLog> queryLogs(String userId, Integer page, Integer pageSize);
 }

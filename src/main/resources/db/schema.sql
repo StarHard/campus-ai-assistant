@@ -26,7 +26,7 @@ INSERT INTO `sys_role` (`role_name`, `role_code`, `description`) VALUES
 
 DROP TABLE IF EXISTS `sys_user`;
 CREATE TABLE `sys_user` (
-    `id`            BIGINT       NOT NULL AUTO_INCREMENT,
+    `id`            VARCHAR(50)  NOT NULL COMMENT '用户ID(学生00开头/教师01开头/admin)',
     `username`      VARCHAR(50)  NOT NULL COMMENT '登录账号',
     `password`      VARCHAR(100) NOT NULL COMMENT '密码(MD5加盐)',
     `salt`          VARCHAR(32)  NOT NULL COMMENT '盐值',
@@ -75,7 +75,7 @@ CREATE TABLE `campus_course` (
     `id`              BIGINT       NOT NULL AUTO_INCREMENT,
     `course_code`     VARCHAR(20)  NOT NULL,
     `course_name`     VARCHAR(100) NOT NULL,
-    `teacher_id`      BIGINT       DEFAULT NULL,
+    `teacher_id`      VARCHAR(50)  DEFAULT NULL,
     `teacher_name`    VARCHAR(30)  DEFAULT NULL,
     `department`      VARCHAR(50)  DEFAULT NULL,
     `credit`          DECIMAL(3,1) DEFAULT NULL,
@@ -135,7 +135,7 @@ CREATE TABLE `campus_activity` (
 DROP TABLE IF EXISTS `sys_user_role`;
 CREATE TABLE `sys_user_role` (
     `id`          BIGINT   NOT NULL AUTO_INCREMENT,
-    `user_id`     BIGINT   NOT NULL COMMENT '用户ID',
+    `user_id`     VARCHAR(50)  NOT NULL COMMENT '用户ID',
     `role_id`     BIGINT   NOT NULL COMMENT '角色ID',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
@@ -160,7 +160,7 @@ CREATE TABLE `campus_reservation` (
 DROP TABLE IF EXISTS `sys_login_log`;
 CREATE TABLE `sys_login_log` (
     `id`          BIGINT NOT NULL AUTO_INCREMENT,
-    `user_id`     BIGINT NOT NULL COMMENT '用户ID',
+    `user_id`     VARCHAR(50) NOT NULL COMMENT '用户ID',
     `username`    VARCHAR(50) DEFAULT NULL,
     `ip_address`  VARCHAR(50) DEFAULT NULL COMMENT '登录IP',
     `user_agent`  VARCHAR(255) DEFAULT NULL,
@@ -171,3 +171,10 @@ CREATE TABLE `sys_login_log` (
     KEY `idx_user_id` (`user_id`),
     KEY `idx_login_time` (`login_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='登录日志表';
+
+-- 初始化管理员账号 (admin / 123456)
+INSERT INTO `sys_user` (`id`, `username`, `password`, `salt`, `real_name`, `user_type`, `department`, `status`) VALUES
+('admin', 'admin', 'e10adc3949ba59abbe56e057f20f883e', 'abcd1234', '系统管理员', 0, '信息中心', 1);
+
+INSERT INTO `sys_user_role` (`user_id`, `role_id`) VALUES
+('admin', 1);

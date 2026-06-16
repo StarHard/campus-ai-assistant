@@ -30,9 +30,9 @@ public class ScheduleController {
     @RequireRole
     @GetMapping("/my")
     public Result<List<Map<String, Object>>> mySchedule(HttpServletRequest request,
-                                                         @RequestParam(required = false) Long userId) {
+                                                         @RequestParam(required = false) String userId) {
         if (userId == null) {
-            userId = (Long) request.getAttribute("userId");
+            userId = (String) request.getAttribute("userId");
         }
         if (userId == null) {
             return Result.error(400, "无法识别用户");

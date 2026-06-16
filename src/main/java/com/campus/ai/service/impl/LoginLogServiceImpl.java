@@ -16,7 +16,7 @@ public class LoginLogServiceImpl implements LoginLogService {
     private LoginLogMapper loginLogMapper;
 
     @Override
-    public void recordLogin(Long userId, String username, String ip, String userAgent, boolean success, String message) {
+    public void recordLogin(String userId, String username, String ip, String userAgent, boolean success, String message) {
         LoginLog loginLog = new LoginLog();
         loginLog.setUserId(userId);
         loginLog.setUsername(username);
@@ -28,7 +28,7 @@ public class LoginLogServiceImpl implements LoginLogService {
     }
 
     @Override
-    public IPage<LoginLog> queryLogs(Long userId, Integer page, Integer pageSize) {
+    public IPage<LoginLog> queryLogs(String userId, Integer page, Integer pageSize) {
         Page<LoginLog> pageObj = new Page<>(page != null ? page : 1, pageSize != null ? pageSize : 10);
         LambdaQueryWrapper<LoginLog> wrapper = new LambdaQueryWrapper<>();
         if (userId != null) {

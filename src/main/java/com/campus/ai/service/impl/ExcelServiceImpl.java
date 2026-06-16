@@ -393,6 +393,7 @@ public class ExcelServiceImpl implements ExcelService {
 
                     // 创建教师账号
                     User teacher = new User();
+                    teacher.setId(teacherNo);
                     teacher.setUsername(teacherNo);
                     teacher.setTeacherNo(teacherNo);
                     String randomSalt = com.campus.ai.util.Md5Util.generateSalt();

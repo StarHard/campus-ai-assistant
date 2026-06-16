@@ -35,7 +35,7 @@ public class UserController {
     @Operation(summary = "获取用户信息")
     @RequireRole
     @GetMapping("/{id}")
-    public Result<User> getUserInfo(@PathVariable Long id) {
+    public Result<User> getUserInfo(@PathVariable String id) {
         User user = userService.getById(id);
         if (user != null) { user.setPassword(null); user.setSalt(null); }
         return Result.success(user);
@@ -44,7 +44,7 @@ public class UserController {
     @Operation(summary = "修改密码")
     @RequireRole
     @PutMapping("/{id}/password")
-    public Result<Void> changePassword(@PathVariable Long id, @RequestParam String oldPassword, @RequestParam String newPassword) {
+    public Result<Void> changePassword(@PathVariable String id, @RequestParam String oldPassword, @RequestParam String newPassword) {
         userService.changePassword(id, oldPassword, newPassword);
         return Result.success("密码修改成功", null);
     }
@@ -60,7 +60,7 @@ public class UserController {
     @Operation(summary = "修改用户基本信息")
     @RequireRole
     @PutMapping("/{id}")
-    public Result<User> updateUser(@PathVariable Long id, @RequestBody UpdateUserRequest request) {
+    public Result<User> updateUser(@PathVariable String id, @RequestBody UpdateUserRequest request) {
         userService.updateUser(id, request);
         User user = userService.getById(id);
         if (user != null) { user.setPassword(null); user.setSalt(null); }
@@ -70,7 +70,7 @@ public class UserController {
     @Operation(summary = "注销用户（仅管理员）")
     @RequireRole("ADMIN")
     @DeleteMapping("/{id}")
-    public Result<Void> deactivateUser(@PathVariable Long id) {
+    public Result<Void> deactivateUser(@PathVariable String id) {
         userService.deactivateUser(id);
         return Result.success("用户已注销", null);
     }

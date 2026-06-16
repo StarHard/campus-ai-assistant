@@ -9,7 +9,7 @@ public class Course {
     private Long id;
     private String courseCode;
     private String courseName;
-    private Long teacherId;
+    private String teacherId;
     private String teacherName;
     private String department;
     private BigDecimal credit;
@@ -53,11 +53,11 @@ public class Course {
         this.courseName = courseName;
     }
 
-    public Long getTeacherId() {
+    public String getTeacherId() {
         return teacherId;
     }
 
-    public void setTeacherId(Long teacherId) {
+    public void setTeacherId(String teacherId) {
         this.teacherId = teacherId;
     }
 

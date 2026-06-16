@@ -8,7 +8,7 @@ import java.util.List;
  * 包含Token和用户完整信息，供前端保存和使用
  */
 public class LoginResponse {
-    private Long userId;
+    private String userId;
     private String username;
     private String realName;
     private Integer userType;
@@ -20,8 +20,8 @@ public class LoginResponse {
     private List<String> roles;    // 用户角色列表
     private List<String> roleNames;// 角色中文名称列表
 
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
     public String getRealName() { return realName; }

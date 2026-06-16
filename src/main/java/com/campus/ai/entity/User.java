@@ -4,8 +4,8 @@ import java.time.LocalDateTime;
 
 @TableName("sys_user")
 public class User {
-    @TableId(type = IdType.AUTO)
-    private Long id;
+    @TableId(type = IdType.INPUT)
+    private String id;
     private String username;
     private String password;
     private String salt;
@@ -29,11 +29,11 @@ public class User {
     @TableLogic
     private Integer deleted;
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
