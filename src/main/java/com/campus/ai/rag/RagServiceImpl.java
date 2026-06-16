@@ -3,6 +3,7 @@ package com.campus.ai.rag;
 import com.campus.ai.dto.ChatResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -18,14 +19,14 @@ import java.util.stream.Collectors;
 
 /**
  * RAG（检索增强生成）服务实现类
- * 基于内存向量存储实现校园文档知识库的精准检索
- * （可后续升级为Milvus/Chroma等专业向量数据库）
+ * 基于 Apache Lucene 全文搜索引擎实现校园文档知识库的精准检索
+ * 使用 SmartCN 中文分词器 + BM25 评分 + 关键词高亮
  *
  * 核心功能：
  * 1. 文档加载与分块
- * 2. 文本向量化（使用简单的TF-IDF或BM25算法）
- * 3. 相似度检索
- * 4. 上下文组装
+ * 2. Lucene 倒排索引检索
+ * 3. BM25 相关性评分
+ * 4. 上下文组装与高亮
  *
  * @author A组长
  */
@@ -37,8 +38,9 @@ public class RagServiceImpl implements RagService {
     /** 知识库存储：文档ID -> 文档内容块列表 */
     private final Map<String, List<DocumentChunk>> knowledgeBase = new ConcurrentHashMap<>();
 
-    /** 向量索引：用于快速检索 */
-    private final List<VectorEntry> vectorIndex = Collections.synchronizedList(new ArrayList<>());
+    /** Lucene 全文索引服务 */
+    @Autowired
+    private LuceneIndexService luceneIndexService;
 
     @Value("${rag.knowledge-base.path:./data/knowledge-base}")
     private String knowledgeBasePath;
@@ -46,14 +48,11 @@ public class RagServiceImpl implements RagService {
     @Value("${rag.retrieval.top-k:5}")
     private int topK;
 
-    @Value("${rag.retrieval.similarity-threshold:0.7}")
-    private double similarityThreshold;
-
     @Value("${rag.enabled:true}")
     private boolean ragEnabled;
 
     /**
-     * 初始化：自动加载知识库目录下的文档
+     * 初始化：自动加载知识库目录下的文档到 Lucene 索引
      */
     @PostConstruct
     public void init() {
@@ -62,14 +61,14 @@ public class RagServiceImpl implements RagService {
             return;
         }
 
-        log.info("初始化RAG知识库...");
+        log.info("初始化RAG知识库（Lucene全文检索引擎）...");
         try {
             File dir = new File(knowledgeBasePath);
             if (dir.exists() && dir.isDirectory()) {
                 int count = loadDocumentsFromDirectory(knowledgeBasePath);
-                log.info("RAG知识库初始化完成，共加载 {} 个文档", count);
+                log.info("RAG知识库初始化完成，共加载 {} 个文档，Lucene索引 {} 条",
+                        count, luceneIndexService.getIndexedDocCount());
             } else {
-                // 创建知识库目录
                 Files.createDirectories(Paths.get(knowledgeBasePath));
                 log.info("创建知识库目录: {}", knowledgeBasePath);
             }
@@ -79,7 +78,7 @@ public class RagServiceImpl implements RagService {
     }
 
     /**
-     * 检索相关上下文信息
+     * 检索相关上下文信息（用于注入 AI Prompt）
      */
     @Override
     public String retrieveContext(String query) {
@@ -92,11 +91,11 @@ public class RagServiceImpl implements RagService {
             return null;
         }
 
-        // 组装上下文文本
+        // 组装上下文文本，包含高亮信息
         StringBuilder context = new StringBuilder();
         for (int i = 0; i < sources.size(); i++) {
             ChatResponse.KnowledgeSource source = sources.get(i);
-            context.append(String.format("[来源%d] %s（相似度: %.2f）\n%s\n\n",
+            context.append(String.format("[来源%d] %s（相关度: %.2f）\n%s\n\n",
                     i + 1,
                     source.getTitle(),
                     source.getScore(),
@@ -107,40 +106,35 @@ public class RagServiceImpl implements RagService {
     }
 
     /**
-     * 检索相关文档来源列表
+     * 检索相关文档来源列表（使用 Lucene BM25 搜索）
      */
     @Override
     public List<ChatResponse.KnowledgeSource> retrieveSources(String query) {
-        if (!ragEnabled || vectorIndex.isEmpty()) {
+        if (!ragEnabled) {
             return Collections.emptyList();
         }
 
-        // 计算查询向量
-        double[] queryVector = textToVector(query);
+        // 使用 Lucene 全文搜索
+        List<LuceneIndexService.SearchResult> luceneResults =
+                luceneIndexService.search(query, topK);
 
-        // 计算相似度并排序
-        List<ScoredDocument> scoredDocs = vectorIndex.stream()
-                .map(entry -> new ScoredDocument(
-                        entry.chunk,
-                        cosineSimilarity(queryVector, entry.vector)))
-                .filter(doc -> doc.score >= similarityThreshold)
-                .sorted(Comparator.comparingDouble((ScoredDocument d) -> d.score).reversed())
-                .limit(topK)
-                .collect(Collectors.toList());
+        if (luceneResults.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        // 转换为KnowledgeSource格式
-        return scoredDocs.stream()
-                .map(doc -> ChatResponse.KnowledgeSource.builder()
-                        .title(doc.chunk.documentId)
-                        .content(doc.chunk.content)
-                        .score(doc.score)
-                        .documentPath(doc.chunk.sourcePath)
+        // 转换为 KnowledgeSource 格式（保留高亮内容）
+        return luceneResults.stream()
+                .map(result -> ChatResponse.KnowledgeSource.builder()
+                        .title(result.docId)
+                        .content(result.highlightedContent)
+                        .score((double) result.score)
+                        .documentPath(result.sourcePath)
                         .build())
                 .collect(Collectors.toList());
     }
 
     /**
-     * 加载单个文档到知识库
+     * 加载单个文档到知识库并建立 Lucene 索引
      */
     @Override
     public boolean loadDocument(String filePath) {
@@ -157,14 +151,18 @@ public class RagServiceImpl implements RagService {
             // 文本分块
             List<DocumentChunk> chunks = splitText(content, fileName, filePath);
 
-            // 向量化并添加到索引
+            // 将每个分块添加到 Lucene 索引
             for (DocumentChunk chunk : chunks) {
-                double[] vector = textToVector(chunk.content);
-                vectorIndex.add(new VectorEntry(chunk, vector));
+                luceneIndexService.addDocument(
+                        fileName + "#" + chunk.chunkIndex,
+                        chunk.content,
+                        filePath
+                );
             }
 
             knowledgeBase.put(fileName, chunks);
-            log.info("成功加载文档: {}, 分块数: {}", fileName, chunks.size());
+            log.info("成功加载文档: {}, 分块数: {}, 已建立Lucene索引",
+                    fileName, chunks.size());
             return true;
 
         } catch (IOException e) {
@@ -209,8 +207,8 @@ public class RagServiceImpl implements RagService {
     @Override
     public void clearKnowledgeBase() {
         knowledgeBase.clear();
-        vectorIndex.clear();
-        log.info("知识库已清空");
+        luceneIndexService.clearAll();
+        log.info("知识库已清空（含Lucene索引）");
     }
 
     @Override
@@ -220,6 +218,7 @@ public class RagServiceImpl implements RagService {
 
     /**
      * 文本分块（按段落和句子进行智能分割）
+     * 每个块最大约500字符，保持语义完整性
      */
     private List<DocumentChunk> splitText(String text, String documentId, String sourcePath) {
         List<DocumentChunk> chunks = new ArrayList<>();
@@ -261,62 +260,9 @@ public class RagServiceImpl implements RagService {
     }
 
     /**
-     * 文本向量化（简化版TF-IDF向量化）
-     * 实际项目中可替换为专业的Embedding模型（如通义千问的text-embedding模型）
-     */
-    private double[] textToVector(String text) {
-        // 使用简单的词频统计作为向量表示
-        Map<String, Integer> wordFreq = new HashMap<>();
-        String[] words = text.toLowerCase().replaceAll("[^a-zA-Z0-9\u4e00-\u9fa5]", " ").split("\\s+");
-
-        for (String word : words) {
-            if (word.length() > 1) { // 过滤单字
-                wordFreq.merge(word, 1, Integer::sum);
-            }
-        }
-
-        // 返回基于词频的稀疏向量（这里简化为固定长度的特征向量）
-        double[] vector = new double[256]; // 固定维度
-        for (Map.Entry<String, Integer> entry : wordFreq.entrySet()) {
-            int index = Math.abs(entry.getKey().hashCode() % 256);
-            vector[index] += entry.getValue();
-        }
-
-        // 归一化
-        double norm = 0;
-        for (double v : vector) norm += v * v;
-        norm = Math.sqrt(norm);
-        if (norm > 0) {
-            for (int i = 0; i < vector.length; i++) {
-                vector[i] /= norm;
-            }
-        }
-
-        return vector;
-    }
-
-    /**
-     * 计算余弦相似度
-     */
-    private double cosineSimilarity(double[] vec1, double[] vec2) {
-        double dotProduct = 0;
-        double norm1 = 0;
-        double norm2 = 0;
-
-        for (int i = 0; i < Math.min(vec1.length, vec2.length); i++) {
-            dotProduct += vec1[i] * vec2[i];
-            norm1 += vec1[i] * vec1[i];
-            norm2 += vec2[i] * vec2[i];
-        }
-
-        if (norm1 == 0 || norm2 == 0) return 0;
-        return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
-    }
-
-    /**
      * 文档内容块内部类
      */
-    private static class DocumentChunk {
+    static class DocumentChunk {
         String documentId;
         int chunkIndex;
         String content;
@@ -327,32 +273,6 @@ public class RagServiceImpl implements RagService {
             this.chunkIndex = chunkIndex;
             this.content = content;
             this.sourcePath = sourcePath;
-        }
-    }
-
-    /**
-     * 向量索引条目内部类
-     */
-    private static class VectorEntry {
-        DocumentChunk chunk;
-        double[] vector;
-
-        VectorEntry(DocumentChunk chunk, double[] vector) {
-            this.chunk = chunk;
-            this.vector = vector;
-        }
-    }
-
-    /**
-     * 评分文档内部类
-     */
-    private static class ScoredDocument {
-        DocumentChunk chunk;
-        double score;
-
-        ScoredDocument(DocumentChunk chunk, double score) {
-            this.chunk = chunk;
-            this.score = score;
         }
     }
 }
