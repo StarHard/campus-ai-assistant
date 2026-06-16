@@ -52,20 +52,11 @@ CREATE TABLE `sys_user` (
 
 DROP TABLE IF EXISTS `campus_classroom`;
 CREATE TABLE `campus_classroom` (
-    `id`              BIGINT       NOT NULL AUTO_INCREMENT,
-    `building_name`   VARCHAR(50)  NOT NULL,
-    `room_number`     VARCHAR(20)  NOT NULL,
-    `room_name`       VARCHAR(50)  NOT NULL,
-    `capacity`        INT          DEFAULT NULL,
-    `room_type`       TINYINT      NOT NULL DEFAULT 1,
-    `has_projector`   TINYINT      NOT NULL DEFAULT 0,
-    `has_air_cond`    TINYINT      NOT NULL DEFAULT 0,
-    `floor`           INT          DEFAULT NULL,
-    `status`          TINYINT      NOT NULL DEFAULT 1,
-    `description`     VARCHAR(255) DEFAULT NULL,
-    `create_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `update_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `deleted`         TINYINT      NOT NULL DEFAULT 0,
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+    `room_name`   VARCHAR(50)  NOT NULL,
+    `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted`     TINYINT      NOT NULL DEFAULT 0,
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_room_name` (`room_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教室信息表';
@@ -87,6 +78,7 @@ CREATE TABLE `campus_course` (
     `semester`        VARCHAR(20)  DEFAULT NULL,
     `description`     VARCHAR(500) DEFAULT NULL,
     `schedule_time`   VARCHAR(100) DEFAULT NULL COMMENT '上课时间',
+    `classroom_name`  VARCHAR(50)  DEFAULT NULL COMMENT '教室名称',
     `status`          TINYINT      NOT NULL DEFAULT 1,
     `create_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `update_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

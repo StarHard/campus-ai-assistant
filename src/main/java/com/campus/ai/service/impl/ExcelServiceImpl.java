@@ -58,7 +58,6 @@ public class ExcelServiceImpl implements ExcelService {
             wrapper.orderByAsc(Course::getCourseCode);
             List<Course> courses = courseMapper.selectList(wrapper);
 
-            // 表头
             List<String> headers = new ArrayList<>();
             headers.add("课程编号");
             headers.add("课程名称");
@@ -71,12 +70,12 @@ public class ExcelServiceImpl implements ExcelService {
             headers.add("课程类型");
             headers.add("考核方式");
             headers.add("学期");
-            headers.add("课程描述");
+            headers.add("教室");
             headers.add("上课时间");
+            headers.add("课程描述");
             headers.add("状态");
             headers.add("创建时间");
 
-            // 数据行
             List<List<Object>> data = new ArrayList<>();
             for (Course course : courses) {
                 List<Object> row = new ArrayList<>();
@@ -91,8 +90,9 @@ public class ExcelServiceImpl implements ExcelService {
                 row.add(getCourseTypeName(course.getCourseType()));
                 row.add(getExamTypeName(course.getExamType()));
                 row.add(course.getSemester());
-                row.add(course.getDescription());
+                row.add(course.getClassroomName());
                 row.add(course.getScheduleTime());
+                row.add(course.getDescription());
                 row.add(course.getStatus() != null && course.getStatus() == 1 ? "启用" : "禁用");
                 row.add(course.getCreateTime());
                 data.add(row);
@@ -141,8 +141,9 @@ public class ExcelServiceImpl implements ExcelService {
             headers.add("课程类型(1必修/2选修/3公选)");
             headers.add("考核方式(1闭卷/2开卷/3考查)");
             headers.add("学期");
-            headers.add("课程描述");
+            headers.add("教室");
             headers.add("上课时间");
+            headers.add("课程描述");
 
             return ExcelUtil.exportToExcel(headers, new ArrayList<>(), "课程导入模板");
 
@@ -173,7 +174,6 @@ public class ExcelServiceImpl implements ExcelService {
             int failCount = 0;
             StringBuilder failReasons = new StringBuilder();
 
-            // 跳过表头行，从第二行开始处理数据
             for (int i = 1; i < rows.size(); i++) {
                 Map<Integer, String> rowData = rows.get(i);
                 try {
@@ -194,9 +194,9 @@ public class ExcelServiceImpl implements ExcelService {
 
                     RegisterRequest request = new RegisterRequest();
                     request.setUsername(studentNo);
-                    request.setPassword("123456"); // 默认密码
+                    request.setPassword("123456");
                     request.setRealName(realName);
-                    request.setUserType(2); // 学生
+                    request.setUserType(2);
                     request.setGender("男".equals(genderStr) ? 1 : ("女".equals(genderStr) ? 2 : 0));
                     request.setPhone(phone.isEmpty() ? null : phone);
                     request.setEmail(email.isEmpty() ? null : email);
@@ -246,7 +246,6 @@ public class ExcelServiceImpl implements ExcelService {
             int failCount = 0;
             StringBuilder failReasons = new StringBuilder();
 
-            // 跳过表头行，从第二行开始处理数据
             for (int i = 1; i < rows.size(); i++) {
                 Map<Integer, String> rowData = rows.get(i);
                 try {
@@ -262,8 +261,9 @@ public class ExcelServiceImpl implements ExcelService {
                     String courseTypeStr = rowData.getOrDefault(9, "").trim();
                     String examTypeStr = rowData.getOrDefault(10, "").trim();
                     String semester = rowData.getOrDefault(11, "").trim();
-                    String description = rowData.getOrDefault(12, "").trim();
+                    String classroomName = rowData.size() > 12 ? rowData.getOrDefault(12, "").trim() : "";
                     String scheduleTime = rowData.size() > 13 ? rowData.getOrDefault(13, "").trim() : "";
+                    String description = rowData.size() > 14 ? rowData.getOrDefault(14, "").trim() : "";
 
                     if (courseCode.isEmpty() || courseName.isEmpty()) {
                         failCount++;
@@ -271,17 +271,14 @@ public class ExcelServiceImpl implements ExcelService {
                         continue;
                     }
 
-                    // 教师工号必填，且必须在数据库中存在
                     if (teacherNo.isEmpty()) {
                         failCount++;
                         failReasons.append("第").append(i + 1).append("行: 教师工号为空; ");
                         continue;
                     }
-                    LambdaQueryWrapper<com.campus.ai.entity.User> teacherWrapper =
-                            new LambdaQueryWrapper<>();
-                    teacherWrapper.eq(com.campus.ai.entity.User::getUsername, teacherNo)
-                            .eq(com.campus.ai.entity.User::getUserType, 1);
-                    com.campus.ai.entity.User teacher = userService.getOne(teacherWrapper);
+                    LambdaQueryWrapper<User> teacherWrapper = new LambdaQueryWrapper<>();
+                    teacherWrapper.eq(User::getUsername, teacherNo).eq(User::getUserType, 1);
+                    User teacher = userService.getOne(teacherWrapper);
                     if (teacher == null) {
                         failCount++;
                         failReasons.append("第").append(i + 1).append("行: 教师工号").append(teacherNo).append("不存在; ");
@@ -301,8 +298,9 @@ public class ExcelServiceImpl implements ExcelService {
                     course.setCourseType(courseTypeStr.isEmpty() ? null : Integer.parseInt(courseTypeStr));
                     course.setExamType(examTypeStr.isEmpty() ? null : Integer.parseInt(examTypeStr));
                     course.setSemester(semester.isEmpty() ? null : semester);
-                    course.setDescription(description.isEmpty() ? null : description);
+                    course.setClassroomName(classroomName.isEmpty() ? null : classroomName);
                     course.setScheduleTime(scheduleTime.isEmpty() ? null : scheduleTime);
+                    course.setDescription(description.isEmpty() ? null : description);
                     course.setStatus(1);
 
                     courseMapper.insert(course);
@@ -338,8 +336,7 @@ public class ExcelServiceImpl implements ExcelService {
             headers.add("手机号");
             headers.add("邮箱");
             headers.add("院系");
-            List<List<Object>> data = new ArrayList<>();
-            return ExcelUtil.exportToExcel(headers, data, "教师导入模板");
+            return ExcelUtil.exportToExcel(headers, new ArrayList<>(), "教师导入模板");
         } catch (Exception e) {
             throw new RuntimeException("生成教师模板失败: " + e.getMessage(), e);
         }
@@ -382,7 +379,6 @@ public class ExcelServiceImpl implements ExcelService {
                         continue;
                     }
 
-                    // 检查工号是否已存在
                     LambdaQueryWrapper<User> checkWrapper = new LambdaQueryWrapper<>();
                     checkWrapper.eq(User::getUsername, teacherNo);
                     if (userService.count(checkWrapper) > 0) {
@@ -391,7 +387,6 @@ public class ExcelServiceImpl implements ExcelService {
                         continue;
                     }
 
-                    // 创建教师账号
                     User teacher = new User();
                     teacher.setId(teacherNo);
                     teacher.setUsername(teacherNo);
@@ -409,10 +404,9 @@ public class ExcelServiceImpl implements ExcelService {
 
                     userService.save(teacher);
 
-                    // 分配教师角色
                     com.campus.ai.entity.UserRole userRole = new com.campus.ai.entity.UserRole();
                     userRole.setUserId(teacher.getId());
-                    userRole.setRoleId(2L); // TEACHER角色
+                    userRole.setRoleId(2L);
                     userRoleMapper.insert(userRole);
 
                     successCount++;

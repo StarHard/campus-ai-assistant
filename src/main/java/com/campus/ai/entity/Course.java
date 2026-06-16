@@ -21,6 +21,7 @@ public class Course {
     private String semester;
     private String description;
     private String scheduleTime;
+    private String classroomName;
     private Integer status;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
@@ -147,6 +148,14 @@ public class Course {
 
     public void setScheduleTime(String scheduleTime) {
         this.scheduleTime = scheduleTime;
+    }
+
+    public String getClassroomName() {
+        return classroomName;
+    }
+
+    public void setClassroomName(String classroomName) {
+        this.classroomName = classroomName;
     }
 
     public Integer getStatus() {
