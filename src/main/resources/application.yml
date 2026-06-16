@@ -56,7 +56,7 @@ spring:
   # SpringAI Alibaba DashScope配置
   ai:
     dashscope:
-      api-key: sk-ws-H.RELRXHX.s6WP.MEYCIQDh5hcqRP11J30QYPv1IA76TBxGR4OCJwIBpOGIAvNUkwIhAKy4VbR-k5RpRt0mu0jeIPViQuV-ICxzwrciLs554LM7
+      api-key: ${DASHSCOPE_API_KEY:}
       chat:
         options:
           model: qwen-max
