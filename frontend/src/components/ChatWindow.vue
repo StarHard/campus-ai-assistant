@@ -286,10 +286,19 @@ const handleSend = async (question) => {
 
 const handleSyncAsk = async (question, typingIndex) => {
   isSending.value = true;
+  // 如果没有会话，先创建一个
+  if (!sessionId.value) {
+    await startNewSession();
+  }
   try {
     const response = await chatApi.ask(question, sessionId.value);
     if (response && response.code === 200 && response.data) {
       const data = response.data;
+      // 使用后端返回的sessionId（确保一致）
+      if (data.sessionId && data.sessionId !== sessionId.value) {
+        sessionId.value = data.sessionId;
+        refreshSessionTitle();
+      }
       messages.value[typingIndex] = {
         content: data.answer || '抱歉，我无法回答这个问题。',
         isUser: false,
@@ -326,6 +335,11 @@ const handleStreamAsk = async (question, typingIndex) => {
   let fullContent = '';
   let sources = [];
 
+  // 如果没有会话，先创建一个
+  if (!sessionId.value) {
+    await startNewSession();
+  }
+
   try {
     await chatApi.streamAsk(
       question,
@@ -342,6 +356,11 @@ const handleStreamAsk = async (question, typingIndex) => {
           };
           scrollToBottom();
         } else if (data.type === 'done') {
+          // 捕获后端返回的sessionId
+          if (data.sessionId && data.sessionId !== sessionId.value) {
+            sessionId.value = data.sessionId;
+            refreshSessionTitle();
+          }
           messages.value[typingIndex] = {
             content: fullContent || '回复完成',
             isUser: false,

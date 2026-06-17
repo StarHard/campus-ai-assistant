@@ -83,6 +83,7 @@ public class ChatController {
     @GetMapping("/session/{sessionId}/history")
     @Operation(summary = "会话历史", description = "获取指定会话的历史消息列表")
     public Result<Object> getSessionHistory(@PathVariable String sessionId) {
+
         log.info("获取会话历史: sessionId={}", sessionId);
         Object history = chatService.getSessionHistory(sessionId);
         return Result.success(history);

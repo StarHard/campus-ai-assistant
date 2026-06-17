@@ -110,6 +110,9 @@ public class ChatServiceImpl implements ChatService {
                     response.getLatency(),
                     response.getTokenUsage() != null ? response.getTokenUsage().getTotalTokens() : "N/A");
 
+            // 持久化消息到数据库
+            saveMessages(sessionId, request.getQuestion(), response.getAnswer());
+
             return response;
 
         } catch (AiServiceException e) {
@@ -146,12 +149,14 @@ public class ChatServiceImpl implements ChatService {
                 var streamResponse = chatClient.prompt(prompt).stream().chatResponse();
 
                 // 发送流式数据（从Flux<ChatResponse>中提取文本内容）
+                java.lang.StringBuilder fullAnswer = new java.lang.StringBuilder();
                 streamResponse.doOnNext(chatResp -> {
                     try {
                         String content = chatResp.getResult() != null && chatResp.getResult().getOutput() != null
                                 ? chatResp.getResult().getOutput().getText()
                                 : "";
                         if (content != null && !content.isEmpty()) {
+                            fullAnswer.append(content);
                             emitter.send(SseEmitter.event()
                                     .name("message")
                                     .data(content));
@@ -161,6 +166,9 @@ public class ChatServiceImpl implements ChatService {
                     }
                 }).doOnComplete(() -> {
                     try {
+                        // 持久化消息到数据库
+                        saveMessages(sessionId, request.getQuestion(), fullAnswer.toString());
+                        
                         emitter.send(SseEmitter.event()
                                 .name("done")
                                 .data("{\"sessionId\":\"" + sessionId + "\",\"latency\":" + (System.currentTimeMillis() - startTime) + "}"));
@@ -283,5 +291,34 @@ public class ChatServiceImpl implements ChatService {
             return request.getModelConfig().getModel();
         }
         return "qwen-max"; // 默认模型
+    }
+
+    /**
+     * 持久化消息到数据库（用户消息 + AI回复）
+     */
+    private void saveMessages(String sessionId, String question, String answer) {
+        try {
+            if (sessionId == null) {
+                log.warn("无法保存消息: sessionId为空");
+                return;
+            }
+            // 保存用户消息
+            ChatMessage userMsg = new ChatMessage();
+            userMsg.setSessionId(sessionId);
+            userMsg.setRole("user");
+            userMsg.setContent(question);
+            chatSessionService.saveMessage(userMsg);
+
+            // 保存AI回复
+            ChatMessage assistantMsg = new ChatMessage();
+            assistantMsg.setSessionId(sessionId);
+            assistantMsg.setRole("assistant");
+            assistantMsg.setContent(answer);
+            chatSessionService.saveMessage(assistantMsg);
+
+            log.debug("消息已持久化: sessionId={}", sessionId);
+        } catch (Exception e) {
+            log.warn("持久化消息失败: {}", e.getMessage());
+        }
     }
 }
