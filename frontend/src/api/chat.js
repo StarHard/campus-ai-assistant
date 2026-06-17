@@ -77,7 +77,7 @@ export const chatApi = {
     return response.data;
   },
 
-  streamAsk: async (question, sessionId = null, onMessage, onDone, onError) => {
+  streamAsk: async (question, sessionId = null, onMessage, onDone, onError, signal) => {
     const token = localStorage.getItem('token');
     try {
       const response = await fetch(`${BASE_URL}/chat/stream`, {
@@ -87,6 +87,7 @@ export const chatApi = {
           ...(token ? { 'X-Token': token } : {}),
         },
         body: JSON.stringify({ question, sessionId, enableRag: true }),
+        signal,
       });
 
       if (!response.ok) {
@@ -129,7 +130,12 @@ export const chatApi = {
       }
       if (onDone) onDone();
     } catch (error) {
-      if (onError) onError(error);
+      if (error.name === 'AbortError') {
+        // 用户取消了生成，正常结束
+        if (onDone) onDone();
+      } else {
+        if (onError) onError(error);
+      }
     }
   },
 };
