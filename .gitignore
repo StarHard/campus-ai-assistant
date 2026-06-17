@@ -1,0 +1,61 @@
+# 编译输出
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE配置文件
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# 日志文件
+logs/
+*.log
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# 临时文件
+*.tmp
+*.bak
+*.swp
+*~
+.tmp/
+
+# 环境变量和敏感配置（绝不能提交！）
+.env
+.env.local
+application-prod.yml
+application-*.yml
+
+# 知识库数据（可选择性忽略）
+data/knowledge-base/*
+!data/knowledge-base/.gitkeep
+
+# 测试覆盖率报告
+coverage/
+jacoco.exec
+
+# 打包产物
+dist/
+build/
+
+# 前端依赖和构建产物
+frontend/node_modules/
+frontend/package-lock.json
+frontend/dist/
+frontend/build/
