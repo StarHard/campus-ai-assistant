@@ -170,3 +170,32 @@ INSERT INTO `sys_user` (`id`, `username`, `password`, `salt`, `real_name`, `user
 
 INSERT INTO `sys_user_role` (`user_id`, `role_id`) VALUES
 ('admin', 1);
+
+-- ============================================================
+-- 聊天会话与消息表（组长A负责）
+-- ============================================================
+
+DROP TABLE IF EXISTS `chat_message`;
+CREATE TABLE `chat_message` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+    `session_id`  VARCHAR(64)  NOT NULL COMMENT '会话ID',
+    `role`        VARCHAR(20)  NOT NULL COMMENT '角色(user/assistant)',
+    `content`     TEXT         NOT NULL COMMENT '消息内容',
+    `sources`     TEXT         DEFAULT NULL COMMENT 'RAG知识来源(JSON)',
+    `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_session_id` (`session_id`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='聊天消息表';
+
+DROP TABLE IF EXISTS `chat_session`;
+CREATE TABLE `chat_session` (
+    `session_id`  VARCHAR(64)  NOT NULL COMMENT '会话ID',
+    `user_id`     VARCHAR(50)  NOT NULL COMMENT '用户ID',
+    `title`       VARCHAR(100) NOT NULL DEFAULT '新会话' COMMENT '会话标题',
+    `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`session_id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_update_time` (`update_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='聊天会话表';

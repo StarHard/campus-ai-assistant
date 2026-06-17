@@ -3,7 +3,10 @@ package com.campus.ai.controller;
 import com.campus.ai.dto.ChatRequest;
 import com.campus.ai.dto.ChatResponse;
 import com.campus.ai.dto.Result;
+import com.campus.ai.entity.ChatSession;
 import com.campus.ai.service.ChatService;
+import com.campus.ai.service.ChatSessionService;
+import com.campus.ai.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Hidden;
@@ -12,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.util.List;
 
 /**
  * AI智能问答控制器
@@ -27,9 +32,13 @@ public class ChatController {
     private static final Logger log = LoggerFactory.getLogger(ChatController.class);
 
     private final ChatService chatService;
+    private final ChatSessionService chatSessionService;
+    private final UserService userService;
 
-    public ChatController(ChatService chatService) {
+    public ChatController(ChatService chatService, ChatSessionService chatSessionService, UserService userService) {
         this.chatService = chatService;
+        this.chatSessionService = chatSessionService;
+        this.userService = userService;
     }
 
     /**
@@ -88,5 +97,50 @@ public class ChatController {
         log.info("获取会话历史: sessionId={}", sessionId);
         Object history = chatService.getSessionHistory(sessionId);
         return Result.success(history);
+    }
+
+    /**
+     * 获取当前用户的所有会话列表
+     */
+    @GetMapping("/sessions")
+    @Operation(summary = "会话列表", description = "获取当前登录用户的所有会话（按更新时间倒序）")
+    public Result<List<ChatSession>> listSessions(
+            @RequestHeader(value = "X-Token", required = false) String token) {
+        String userId = getUserIdFromToken(token);
+        List<ChatSession> sessions = chatSessionService.listSessions(userId);
+        return Result.success(sessions);
+    }
+
+    /**
+     * 创建新会话
+     */
+    @PostMapping("/session")
+    @Operation(summary = "创建会话", description = "创建新的聊天会话")
+    public Result<String> createSession(
+            @RequestHeader(value = "X-Token", required = false) String token,
+            @RequestParam(defaultValue = "新会话") String title) {
+        String userId = getUserIdFromToken(token);
+        String sessionId = chatSessionService.createSession(userId, title);
+        log.info("创建会话: sessionId={}, userId={}", sessionId, userId);
+        return Result.success(sessionId);
+    }
+
+    /**
+     * 删除会话
+     */
+    @DeleteMapping("/session/{sessionId}")
+    @Operation(summary = "删除会话", description = "删除指定会话及其所有消息")
+    public Result<Void> deleteSession(@PathVariable String sessionId) {
+        log.info("删除会话: sessionId={}", sessionId);
+        chatSessionService.deleteSession(sessionId);
+        return Result.success();
+    }
+
+    private String getUserIdFromToken(String token) {
+        if (token == null || token.isEmpty()) {
+            return "anonymous";
+        }
+        String userId = userService.validateToken(token);
+        return userId != null ? userId : "anonymous";
     }
 }

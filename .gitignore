@@ -46,6 +46,9 @@ application-*.yml
 data/knowledge-base/*
 !data/knowledge-base/.gitkeep
 
+# Lucene索引（运行时自动生成，不应入库）
+data/lucene-index/
+
 # 测试覆盖率报告
 coverage/
 jacoco.exec

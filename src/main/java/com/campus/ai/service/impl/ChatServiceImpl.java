@@ -3,8 +3,10 @@ package com.campus.ai.service.impl;
 import com.campus.ai.config.AiServiceException;
 import com.campus.ai.dto.ChatRequest;
 import com.campus.ai.dto.ChatResponse;
+import com.campus.ai.entity.ChatMessage;
 import com.campus.ai.rag.RagService;
 import com.campus.ai.service.ChatService;
+import com.campus.ai.service.ChatSessionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -40,6 +42,9 @@ public class ChatServiceImpl implements ChatService {
 
     @Autowired(required = false)
     private RagService ragService;
+
+    @Autowired
+    private ChatSessionService chatSessionService;
 
     @Value("${app.system-prompt:}")
     private String defaultSystemPrompt;
@@ -208,15 +213,22 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public void clearSession(String sessionId) {
-        // TODO: 实现会话清理逻辑（可结合Redis或内存存储）
-        log.info("清理会话: sessionId={}", sessionId);
+        chatSessionService.clearMessages(sessionId);
     }
 
     @Override
     public Object getSessionHistory(String sessionId) {
-        // TODO: 实现会话历史查询逻辑
-        log.info("获取会话历史: sessionId={}", sessionId);
-        return null;
+        List<ChatMessage> messages = chatSessionService.getMessages(sessionId);
+        return messages.stream().map(msg -> {
+            java.util.Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("role", msg.getRole());
+            item.put("content", msg.getContent());
+            if (msg.getSources() != null && !msg.getSources().isEmpty()) {
+                item.put("sources", msg.getSources());
+            }
+            item.put("timestamp", msg.getCreateTime() != null ? msg.getCreateTime().toString() : "");
+            return item;
+        }).toList();
     }
 
     /**
