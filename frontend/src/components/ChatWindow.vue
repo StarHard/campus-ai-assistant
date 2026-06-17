@@ -97,16 +97,9 @@
             :suggestions="msg.suggestions || []"
             :links="msg.links || []"
             :fjut-search-links="msg.fjutSearchLinks || []"
+            :videos="msg.videos || []"
             @select-suggestion="handleSuggestionClick"
           />
-          <!-- B站视频推荐 -->
-          <div v-if="messages.length > 0" class="max-w-3xl mx-auto pl-0 sm:pl-4">
-            <VideoCards
-              v-for="(msg, index) in messages"
-              :key="'vc-' + index"
-              :videos="msg.videos || []"
-            />
-          </div>
         </div>
       </main>
 
@@ -122,7 +115,6 @@ import ChatInput from './ChatInput.vue';
 import { chatApi, ragApi } from '../api/chat';
 import { generateSuggestions } from '../utils/suggestionEngine';
 import { searchBilibili, detectCourseIntent, bilibiliSearchUrl, getCourseVideos } from '../utils/bilibiliService';
-import VideoCards from './VideoCards.vue';
 
 const messages = ref([]);
 const messagesContainer = ref(null);

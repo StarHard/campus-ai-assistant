@@ -32,6 +32,11 @@
         @select="suggestionText => $emit('select-suggestion', suggestionText)"
       />
 
+      <VideoCards
+        v-if="!isUser && !isTyping && videos?.length"
+        :videos="videos"
+      />
+
       <div 
         class="mt-1 text-[12px] text-notion-ink-faint"
       >
@@ -43,6 +48,7 @@
 
 <script setup>
 import SuggestionCards from './SuggestionCards.vue';
+import VideoCards from './VideoCards.vue';
 
 defineProps({
   content: {
@@ -74,6 +80,10 @@ defineProps({
     default: () => [],
   },
   fjutSearchLinks: {
+    type: Array,
+    default: () => [],
+  },
+  videos: {
     type: Array,
     default: () => [],
   },
