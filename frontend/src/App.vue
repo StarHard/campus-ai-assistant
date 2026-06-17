@@ -36,12 +36,39 @@
           >
             教室查询
           </router-link>
+          <router-link
+            to="/schedule"
+            class="px-3 py-1.5 text-[14px] rounded-notion-sm transition-colors"
+            :class="$route.path === '/schedule' ? 'text-notion-primary bg-notion-primary/5' : 'text-notion-ink-muted hover:text-notion-ink hover:bg-notion-canvas-soft'"
+          >
+            我的课表
+          </router-link>
+          <router-link
+            to="/dashboard"
+            class="px-3 py-1.5 text-[14px] rounded-notion-sm transition-colors"
+            :class="$route.path === '/dashboard' ? 'text-notion-primary bg-notion-primary/5' : 'text-notion-ink-muted hover:text-notion-ink hover:bg-notion-canvas-soft'"
+          >
+            数据看板
+          </router-link>
+          <router-link
+            to="/knowledge-base"
+            class="px-3 py-1.5 text-[14px] rounded-notion-sm transition-colors"
+            :class="$route.path === '/knowledge-base' ? 'text-notion-primary bg-notion-primary/5' : 'text-notion-ink-muted hover:text-notion-ink hover:bg-notion-canvas-soft'"
+          >
+            知识库
+          </router-link>
         </div>
 
         <!-- 右侧用户 -->
         <div class="flex items-center gap-3">
           <template v-if="userStore.isLoggedIn">
-            <span class="text-[14px] text-notion-ink-secondary">{{ userStore.user?.realName || userStore.user?.username }}</span>
+            <router-link
+              to="/profile"
+              class="text-[14px] text-notion-ink-secondary hover:text-notion-primary transition-colors"
+              :class="$route.path === '/profile' ? 'text-notion-primary' : ''"
+            >
+              {{ userStore.user?.realName || userStore.user?.username }}
+            </router-link>
             <button
               @click="handleLogout"
               class="text-[14px] text-notion-ink-faint hover:text-notion-ink-muted transition-colors"

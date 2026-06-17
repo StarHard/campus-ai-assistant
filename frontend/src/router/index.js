@@ -7,6 +7,11 @@ const routes = [
     component: () => import('../components/ChatWindow.vue'),
   },
   {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: () => import('../views/Dashboard.vue'),
+  },
+  {
     path: '/courses',
     name: 'Courses',
     component: () => import('../views/CourseList.vue'),
@@ -20,6 +25,21 @@ const routes = [
     path: '/classrooms',
     name: 'Classrooms',
     component: () => import('../views/ClassroomList.vue'),
+  },
+  {
+    path: '/schedule',
+    name: 'Schedule',
+    component: () => import('../views/Schedule.vue'),
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('../views/Profile.vue'),
+  },
+  {
+    path: '/knowledge-base',
+    name: 'KnowledgeBase',
+    component: () => import('../views/KnowledgeBase.vue'),
   },
   {
     path: '/login',
