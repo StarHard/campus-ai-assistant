@@ -53,6 +53,20 @@ export const chatApi = {
     return response.data;
   },
 
+  // 获取当前用户所有会话列表
+  getSessions: async () => {
+    const response = await api.get('/chat/sessions');
+    return response.data;
+  },
+
+  // 创建新会话，返回 sessionId
+  createSession: async (title = '新会话') => {
+    const response = await api.post('/chat/session', null, {
+      params: { title },
+    });
+    return response.data;
+  },
+
   getSessionHistory: async (sessionId) => {
     const response = await api.get(`/chat/session/${sessionId}/history`);
     return response.data;

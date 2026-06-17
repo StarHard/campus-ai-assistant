@@ -175,15 +175,18 @@ const loadUserInfo = async () => {
 const saveProfile = async () => {
   saving.value = true;
   try {
-    // 后端有 PUT /user/{id} 接口，但需要 UpdateUserRequest DTO
-    // 这里用已有字段更新
-    await userApi.getUserInfo(userInfo.id); // 先检查接口可用性
-    Object.assign(userInfo, form);
-    editing.value = false;
-  } catch {
-    // 如果后端暂不支持编辑，直接回显本地修改
-    Object.assign(userInfo, form);
-    editing.value = false;
+    const res = await userApi.updateUser(userInfo.id, {
+      realName: form.realName,
+      email: form.email,
+      phone: form.phone,
+      username: form.username,
+    });
+    if (res.code === 200) {
+      Object.assign(userInfo, { username: form.username, realName: form.realName, email: form.email, phone: form.phone });
+      editing.value = false;
+    }
+  } catch (e) {
+    console.error('保存失败:', e);
   } finally {
     saving.value = false;
   }

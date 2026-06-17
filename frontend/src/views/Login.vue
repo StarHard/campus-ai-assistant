@@ -87,7 +87,8 @@ const handleLogin = async () => {
       errorMsg.value = result.message;
     }
   } catch (e) {
-    errorMsg.value = '网络错误，请检查后端服务是否启动。';
+    const msg = e.response?.data?.message || e.message;
+    errorMsg.value = msg === 'Network Error' ? '无法连接到服务器，请检查后端是否已启动' : (msg || '登录失败，请重试');
   } finally {
     loading.value = false;
   }

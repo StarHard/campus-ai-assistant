@@ -24,6 +24,14 @@
         {{ content }}<span v-if="isTyping" class="inline-block w-2 h-4 ml-0.5 bg-notion-ink-faint align-middle animate-pulse"></span>
       </div>
 
+      <SuggestionCards
+        v-if="!isUser && !isTyping && (suggestions?.length || links?.length || fjutSearchLinks?.length)"
+        :suggestions="suggestions || []"
+        :links="links || []"
+        :fjut-search-links="fjutSearchLinks || []"
+        @select="suggestionText => $emit('select-suggestion', suggestionText)"
+      />
+
       <div 
         class="mt-1 text-[12px] text-notion-ink-faint"
       >
@@ -34,6 +42,8 @@
 </template>
 
 <script setup>
+import SuggestionCards from './SuggestionCards.vue';
+
 defineProps({
   content: {
     type: String,
@@ -55,7 +65,21 @@ defineProps({
     type: Array,
     default: () => [],
   },
+  suggestions: {
+    type: Array,
+    default: () => [],
+  },
+  links: {
+    type: Array,
+    default: () => [],
+  },
+  fjutSearchLinks: {
+    type: Array,
+    default: () => [],
+  },
 });
+
+defineEmits(['select-suggestion']);
 
 const formatTime = (time) => {
   const date = new Date(time);

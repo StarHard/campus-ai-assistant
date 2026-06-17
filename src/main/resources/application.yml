@@ -38,6 +38,11 @@ spring:
         url-pattern: /druid/*
         login-username: admin
         login-password: admin123
+  # SQL初始化（启动时自动执行schema.sql建表）
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql
 
   # Jackson JSON配置
   jackson:

@@ -2,7 +2,6 @@ package com.campus.ai.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.campus.ai.annotation.RequireRole;
 import com.campus.ai.dto.PageRequest;
 import com.campus.ai.dto.Result;
 import com.campus.ai.entity.Classroom;
@@ -14,10 +13,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "教室管理", description = "教室信息查询接口")
+@Tag(name = "教室管理", description = "教室信息查询接口(开放访问)")
 @RestController
 @RequestMapping("/classroom")
-@RequireRole
 public class ClassroomController {
 
     @Autowired

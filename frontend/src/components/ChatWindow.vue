@@ -16,14 +16,14 @@
       <div class="flex-1 overflow-y-auto px-2 space-y-0.5">
         <div
           v-for="s in sessionList"
-          :key="s.id"
-          @click="switchSession(s.id)"
+          :key="s.sessionId || s.session_id"
+          @click="switchSession(s.sessionId || s.session_id)"
           class="px-3 py-1.5 rounded-notion-sm cursor-pointer transition-colors group flex items-center justify-between"
-          :class="s.id === sessionId ? 'bg-notion-canvas-soft text-notion-ink' : 'text-notion-ink-muted hover:bg-notion-canvas-soft'"
+          :class="(s.sessionId || s.session_id) === sessionId ? 'bg-notion-canvas-soft text-notion-ink' : 'text-notion-ink-muted hover:bg-notion-canvas-soft'"
         >
-          <span class="text-[13px] truncate flex-1">{{ s.title }}</span>
+          <span class="text-[13px] truncate flex-1">{{ s.title || '新会话' }}</span>
           <button
-            @click.stop="deleteSession(s.id)"
+            @click.stop="deleteSession(s.sessionId || s.session_id)"
             class="opacity-0 group-hover:opacity-100 text-notion-ink-faint hover:text-notion-ink-muted ml-1 text-xs"
           >
             ×
@@ -94,7 +94,19 @@
             :timestamp="msg.timestamp"
             :is-typing="msg.isTyping"
             :sources="msg.sources"
+            :suggestions="msg.suggestions || []"
+            :links="msg.links || []"
+            :fjut-search-links="msg.fjutSearchLinks || []"
+            @select-suggestion="handleSuggestionClick"
           />
+          <!-- B站视频推荐 -->
+          <div v-if="messages.length > 0" class="max-w-3xl mx-auto pl-0 sm:pl-4">
+            <VideoCards
+              v-for="(msg, index) in messages"
+              :key="'vc-' + index"
+              :videos="msg.videos || []"
+            />
+          </div>
         </div>
       </main>
 
@@ -104,18 +116,22 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, watch } from 'vue';
+import { ref, nextTick, onMounted } from 'vue';
 import MessageBubble from './MessageBubble.vue';
 import ChatInput from './ChatInput.vue';
 import { chatApi, ragApi } from '../api/chat';
+import { generateSuggestions } from '../utils/suggestionEngine';
+import { searchBilibili, detectCourseIntent, bilibiliSearchUrl, getCourseVideos } from '../utils/bilibiliService';
+import VideoCards from './VideoCards.vue';
 
 const messages = ref([]);
 const messagesContainer = ref(null);
-const sessionId = ref('session-' + Date.now());
+const sessionId = ref(null);  // 后端管理sessionId
 const streamMode = ref(true);
 const isSending = ref(false);
 const sessionList = ref([]);
 const ragStats = ref({ documentCount: 0, status: 'inactive' });
+const loadingSessions = ref(false);
 
 const welcomeQuestions = [
   '图书馆开放时间',
@@ -125,70 +141,96 @@ const welcomeQuestions = [
   '考试安排',
 ];
 
-// ===== 会话历史管理 =====
-const SESSIONS_KEY = 'chat_sessions';
+// ===== 会话管理（后端持久化） =====
 
-const loadSessionList = () => {
+// 从后端加载会话列表
+const loadSessionList = async () => {
+  loadingSessions.value = true;
   try {
-    const saved = localStorage.getItem(SESSIONS_KEY);
-    sessionList.value = saved ? JSON.parse(saved) : [];
+    const res = await chatApi.getSessions();
+    if (res.code === 200 && res.data) {
+      sessionList.value = res.data;
+    }
   } catch {
-    sessionList.value = [];
+    console.warn('加载会话列表失败');
+    ElMessage.warning('加载会话列表失败，请检查后端服务');
+  } finally {
+    loadingSessions.value = false;
   }
 };
 
-const saveSessionList = () => {
-  localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessionList.value));
-};
-
-const saveCurrentSession = () => {
-  if (messages.value.length === 0) return;
-  const firstUserMsg = messages.value.find(m => m.isUser);
-  const title = firstUserMsg ? firstUserMsg.content.slice(0, 20) : '新会话';
-  const idx = sessionList.value.findIndex(s => s.id === sessionId.value);
-  if (idx >= 0) {
-    sessionList.value[idx].title = title;
-  } else {
-    sessionList.value.unshift({ id: sessionId.value, title });
-  }
-  saveSessionList();
-};
-
-const saveMessages = () => {
-  localStorage.setItem('chat_messages_' + sessionId.value, JSON.stringify(messages.value));
-};
-
-const loadMessages = (sid) => {
+// 从后端加载指定会话的历史消息
+const loadHistory = async (sid) => {
+  if (!sid) return;
   try {
-    const saved = localStorage.getItem('chat_messages_' + sid);
-    messages.value = saved ? JSON.parse(saved) : [];
+    const res = await chatApi.getSessionHistory(sid);
+    if (res.code === 200 && res.data) {
+      messages.value = res.data.map(msg => ({
+        content: msg.content || '',
+        isUser: msg.role === 'user',
+        timestamp: msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now(),
+        isTyping: false,
+        sources: msg.sources || [],
+      }));
+    } else {
+      messages.value = [];
+    }
   } catch {
     messages.value = [];
   }
+  await scrollToBottom();
 };
 
-const switchSession = (sid) => {
-  saveCurrentSession();
-  saveMessages();
+// 切换会话
+const switchSession = async (sid) => {
+  if (sid === sessionId.value) return;
   sessionId.value = sid;
-  loadMessages(sid);
-  scrollToBottom();
+  messages.value = [];
+  await loadHistory(sid);
 };
 
-const deleteSession = (sid) => {
-  sessionList.value = sessionList.value.filter(s => s.id !== sid);
-  localStorage.removeItem('chat_messages_' + sid);
-  saveSessionList();
+// 删除会话
+const deleteSession = async (sid) => {
+  try {
+    await chatApi.clearSession(sid);
+  } catch {
+    console.warn('删除会话失败');
+  }
+  sessionList.value = sessionList.value.filter(s => {
+    return s.sessionId !== sid && s.session_id !== sid;
+  });
   if (sid === sessionId.value) {
-    startNewSession();
+    await startNewSession();
   }
 };
 
-const startNewSession = () => {
-  saveCurrentSession();
-  saveMessages();
-  sessionId.value = 'session-' + Date.now();
+// 创建新会话
+const startNewSession = async () => {
   messages.value = [];
+  try {
+    const res = await chatApi.createSession('新会话');
+    if (res.code === 200 && res.data) {
+      const newId = typeof res.data === 'string' ? res.data : res.data.sessionId;
+      sessionId.value = newId;
+      // 同步刷新列表
+      await loadSessionList();
+    } else {
+      sessionId.value = null;
+    }
+  } catch {
+    console.warn('创建会话失败，使用本地模式');
+    sessionId.value = 'session-' + Date.now();
+  }
+};
+
+// 更新会话列表中的标题（对话后标题可能变化）
+const refreshSessionTitle = async () => {
+  try {
+    const res = await chatApi.getSessions();
+    if (res.code === 200 && res.data) {
+      sessionList.value = res.data;
+    }
+  } catch { /* ignore */ }
 };
 
 // ===== 知识库统计 =====
@@ -231,17 +273,19 @@ const handleSend = async (question) => {
   }) - 1;
 
   await scrollToBottom();
-  saveCurrentSession();
-  saveMessages();
 
   if (streamMode.value) {
     await handleStreamAsk(question, typingIndex);
   } else {
     await handleSyncAsk(question, typingIndex);
   }
+
+  // 刷新会话列表（标题可能更新）
+  refreshSessionTitle();
 };
 
 const handleSyncAsk = async (question, typingIndex) => {
+  isSending.value = true;
   try {
     const response = await chatApi.ask(question, sessionId.value);
     if (response && response.code === 200 && response.data) {
@@ -271,7 +315,9 @@ const handleSyncAsk = async (question, typingIndex) => {
       sources: [],
     };
   }
-  saveMessages();
+  isSending.value = false;
+  // 生成追问建议
+  _generateSuggestions(typingIndex, question);
   await scrollToBottom();
 };
 
@@ -285,7 +331,6 @@ const handleStreamAsk = async (question, typingIndex) => {
       question,
       sessionId.value,
       (data) => {
-        // 收到流式数据片段
         if (data.type === 'message' && data.content) {
           fullContent += data.content;
           messages.value[typingIndex] = {
@@ -318,7 +363,6 @@ const handleStreamAsk = async (question, typingIndex) => {
         }
       },
       () => {
-        // 流结束
         messages.value[typingIndex] = {
           content: fullContent || '回复完成',
           isUser: false,
@@ -327,7 +371,8 @@ const handleStreamAsk = async (question, typingIndex) => {
           sources: sources,
         };
         isSending.value = false;
-        saveMessages();
+        // 生成追问建议
+        _generateSuggestions(typingIndex, question);
         scrollToBottom();
       },
       (error) => {
@@ -340,7 +385,8 @@ const handleStreamAsk = async (question, typingIndex) => {
           sources: [],
         };
         isSending.value = false;
-        saveMessages();
+        // 生成追问建议
+        _generateSuggestions(typingIndex, question);
         scrollToBottom();
       }
     );
@@ -353,8 +399,32 @@ const handleStreamAsk = async (question, typingIndex) => {
       sources: [],
     };
     isSending.value = false;
-    saveMessages();
+    // 生成追问建议
+    _generateSuggestions(typingIndex, question);
     await scrollToBottom();
+  }
+};
+
+const _generateSuggestions = (typingIndex, question) => {
+  const aiMsg = messages.value[typingIndex];
+  if (!aiMsg) return;
+  const aiAnswer = aiMsg.content || '';
+  const result = generateSuggestions(question, aiAnswer);
+  aiMsg.suggestions = result.suggestions || [];
+  aiMsg.links = result.links || [];
+  aiMsg.fjutSearchLinks = result.fjutSearchLinks || [];
+
+  // 精品课程视频（静态库，立刻返回）
+  const courseName = detectCourseIntent(question);
+  aiMsg.videos = courseName ? getCourseVideos(question) : [];
+
+  // 异步补充B站动态搜索结果
+  if (courseName) {
+    searchBilibili(question).then(more => {
+      if (more.length > (aiMsg.videos || []).length) {
+        aiMsg.videos = more;
+      }
+    }).catch(() => {});
   }
 };
 
@@ -362,19 +432,23 @@ const sendQuickQuestion = (question) => {
   handleSend(question);
 };
 
+// 处理追问建议点击
+const handleSuggestionClick = (text) => {
+  handleSend(text);
+};
+
 // ===== 初始化 =====
-onMounted(() => {
-  loadSessionList();
-  loadMessages(sessionId.value);
-  loadRagStats();
-  // 把当前会话加入列表
-  if (messages.value.length > 0) {
-    const firstUserMsg = messages.value.find(m => m.isUser);
-    const title = firstUserMsg ? firstUserMsg.content.slice(0, 20) : '新会话';
-    if (!sessionList.value.find(s => s.id === sessionId.value)) {
-      sessionList.value.unshift({ id: sessionId.value, title });
-      saveSessionList();
-    }
+onMounted(async () => {
+  await loadRagStats();
+  await loadSessionList();
+  // 如果已有会话，切换到最新一个；否则创建新会话
+  if (sessionList.value.length > 0) {
+    const latest = sessionList.value[0];
+    const sid = latest.sessionId || latest.session_id;
+    sessionId.value = sid;
+    await loadHistory(sid);
+  } else {
+    await startNewSession();
   }
 });
 </script>

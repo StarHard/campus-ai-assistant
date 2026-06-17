@@ -29,4 +29,9 @@ export const userApi = {
     });
     return response.data;
   },
+
+  updateUser: async (id, data) => {
+    const response = await api.put(`/user/${id}`, data);
+    return response.data;
+  },
 };

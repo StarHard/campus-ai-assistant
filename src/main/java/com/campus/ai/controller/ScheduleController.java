@@ -26,13 +26,14 @@ public class ScheduleController {
     @Autowired
     private UserMapper userMapper;
 
-    @Operation(summary = "我的课表（需登录，根据学生院系和年级查询课程）")
+    @Operation(summary = "我的课表（学生按院系+学期，教师按自己的课程查询）")
     @RequireRole
     @GetMapping("/my")
     public Result<List<Map<String, Object>>> mySchedule(HttpServletRequest request,
-                                                         @RequestParam(required = false) String userId) {
+                                                         @RequestParam(required = false) String userId,
+                                                         @RequestParam(required = false) String semester) {
         if (userId == null) {
-            userId = (String) request.getAttribute("userId");
+            userId = (String) request.getAttribute("currentUserId");
         }
         if (userId == null) {
             return Result.error(400, "无法识别用户");
@@ -40,12 +41,18 @@ public class ScheduleController {
         User user = userMapper.selectById(userId);
         if (user == null) return Result.success(Collections.emptyList());
 
-        // 学生：查询该院系的课程（模糊匹配学期）
         LambdaQueryWrapper<Course> courseWrapper = new LambdaQueryWrapper<>();
-        courseWrapper.eq(Course::getDepartment, user.getDepartment())
-                .eq(Course::getStatus, 1);
-        if (user.getGrade() != null && !user.getGrade().isEmpty()) {
-            courseWrapper.likeRight(Course::getSemester, user.getGrade());
+        courseWrapper.eq(Course::getStatus, 1);
+
+        // 教师：查询自己教的课程；学生：查询本院系的课程
+        if (user.getUserType() != null && user.getUserType() == 2) {
+            courseWrapper.eq(Course::getTeacherId, userId);
+        } else {
+            courseWrapper.eq(Course::getDepartment, user.getDepartment());
+        }
+
+        if (semester != null && !semester.isEmpty()) {
+            courseWrapper.eq(Course::getSemester, semester);
         }
         List<Course> courses = courseMapper.selectList(courseWrapper);
 

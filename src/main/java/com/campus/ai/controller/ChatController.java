@@ -78,17 +78,6 @@ public class ChatController {
     }
 
     /**
-     * 清理会话历史
-     */
-    @DeleteMapping("/session/{sessionId}")
-    @Operation(summary = "清理会话", description = "清理指定会话的历史记录")
-    public Result<Void> clearSession(@PathVariable String sessionId) {
-        log.info("清理会话: sessionId={}", sessionId);
-        chatService.clearSession(sessionId);
-        return Result.success();
-    }
-
-    /**
      * 获取会话历史记录
      */
     @GetMapping("/session/{sessionId}/history")
