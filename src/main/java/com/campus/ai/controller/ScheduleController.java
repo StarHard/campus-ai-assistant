@@ -62,6 +62,7 @@ public class ScheduleController {
             item.put("courseType", c.getCourseType());
             item.put("semester", c.getSemester());
             item.put("scheduleTime", c.getScheduleTime());
+            item.put("classroomName", c.getClassroomName());
             item.put("description", c.getDescription());
             result.add(item);
         }
