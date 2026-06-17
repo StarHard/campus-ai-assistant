@@ -1,9 +1,6 @@
 -- ============================================================
--- 校园智能服务小助手 - 数据库初始化脚本（组员B：邱春凯负责）
+-- 校园智能服务小助手 - 数据库初始化脚本
 -- ============================================================
-
-CREATE DATABASE IF NOT EXISTS campus_assistant DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE campus_assistant;
 
 DROP TABLE IF EXISTS `sys_role`;
 CREATE TABLE `sys_role` (
