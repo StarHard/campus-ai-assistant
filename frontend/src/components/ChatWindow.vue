@@ -103,6 +103,19 @@
         </div>
       </main>
 
+      <!-- 停止生成按钮 -->
+      <div v-if="isSending && streamMode" class="flex justify-center pb-2">
+        <button
+          @click="cancelGeneration"
+          class="px-4 py-1.5 text-[13px] bg-notion-canvas border border-notion-accent-red/30 hover:bg-notion-accent-red/5 text-notion-accent-red rounded-notion-full transition-all flex items-center gap-1.5 shadow-notion-1"
+        >
+          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
+            <rect x="3" y="3" width="10" height="10" rx="2" />
+          </svg>
+          停止生成
+        </button>
+      </div>
+
       <ChatInput @send="handleSend" :disabled="isSending" />
     </div>
   </div>
@@ -121,6 +134,7 @@ const messagesContainer = ref(null);
 const sessionId = ref(null);  // 后端管理sessionId
 const streamMode = ref(true);
 const isSending = ref(false);
+const abortController = ref(null);
 const sessionList = ref([]);
 const ragStats = ref({ documentCount: 0, status: 'inactive' });
 const loadingSessions = ref(false);
@@ -332,6 +346,10 @@ const handleStreamAsk = async (question, typingIndex) => {
     await startNewSession();
   }
 
+  // 创建 AbortController 用于取消请求
+  const controller = new AbortController();
+  abortController.value = controller;
+
   try {
     await chatApi.streamAsk(
       question,
@@ -382,6 +400,7 @@ const handleStreamAsk = async (question, typingIndex) => {
           sources: sources,
         };
         isSending.value = false;
+        abortController.value = null;
         // 生成追问建议
         _generateSuggestions(typingIndex, question);
         scrollToBottom();
@@ -396,10 +415,12 @@ const handleStreamAsk = async (question, typingIndex) => {
           sources: [],
         };
         isSending.value = false;
+        abortController.value = null;
         // 生成追问建议
         _generateSuggestions(typingIndex, question);
         scrollToBottom();
-      }
+      },
+      controller.signal
     );
   } catch (error) {
     messages.value[typingIndex] = {
@@ -410,9 +431,19 @@ const handleStreamAsk = async (question, typingIndex) => {
       sources: [],
     };
     isSending.value = false;
+    abortController.value = null;
     // 生成追问建议
     _generateSuggestions(typingIndex, question);
     await scrollToBottom();
+  }
+};
+
+// 取消 AI 生成
+const cancelGeneration = () => {
+  if (abortController.value) {
+    abortController.value.abort();
+    abortController.value = null;
+    isSending.value = false;
   }
 };
 
